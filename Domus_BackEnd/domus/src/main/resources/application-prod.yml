@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://aws-1-sa-east-1.pooler.supabase.com:6543/postgres?sslmode=require&prepareThreshold=0
+    username: postgres.svxdmuthiycwgqgxpwyn
+    password: ${SUPABASE_DB_PASSWORD}
+
+  ssl:
+    bundle:
+      jks:
+        web-server:
+          keystore:
+            location: file:/keystore/keystore.p12
+            password: ${SSL_KEYSTORE_PASSWORD}
+            type: PKCS12
+
+  flyway:
+    clean-disabled: true  # NUNCA apaga dados em produção
+
+  # ── RabbitMQ (produção — EC2) ────────────────────────────────────────────────
+  # Em produção o RabbitMQ roda como container Docker na mesma rede (domus-net).
+  # O backend resolve o host pelo nome do container: RABBITMQ_HOST=rabbitmq
+  # Variáveis injetadas pelo GitHub Actions (secrets):
+  #   RABBITMQ_HOST     → "rabbitmq" (nome do container na rede domus-net)
+  #   RABBITMQ_USERNAME → secret RABBITMQ_USERNAME
+  #   RABBITMQ_PASSWORD → secret RABBITMQ_PASSWORD
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+
+server:
+  port: 8443
+  ssl:
+    bundle: web-server
+
+app:
+  demo-mode: true
+  cookie:
+    secure: true
+    domain: .domusapp.dev.br
