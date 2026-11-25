@@ -44,6 +44,10 @@ export default function IncomePage() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [search, setSearch] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [frequencyFilter, setFrequencyFilter] = useState("ALL");
 
   useEffect(() => {
     loadIncomes();
@@ -149,6 +153,17 @@ export default function IncomePage() {
     }
   };
 
+  const filteredIncomes = incomes.filter((income) => {
+    const term = search.trim().toLocaleLowerCase("pt-BR");
+    const dateValue = new Date(`${income.startDate}T00:00:00`);
+    const now = new Date();
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return (!term || `${income.description} ${income.category}`.toLocaleLowerCase("pt-BR").includes(term))
+      && (categoryFilter === "ALL" || income.category === categoryFilter)
+      && (frequencyFilter === "ALL" || income.frequency === frequencyFilter)
+      && (periodFilter === "ALL" || (periodFilter === "CURRENT_MONTH" && dateValue.getFullYear() === now.getFullYear() && dateValue.getMonth() === now.getMonth()) || (periodFilter === "PREVIOUS_MONTH" && dateValue.getFullYear() === previousMonth.getFullYear() && dateValue.getMonth() === previousMonth.getMonth()));
+  });
+
   return (
     <div className="space-y-6">
       {/* TÍTULO */}
@@ -189,6 +204,12 @@ export default function IncomePage() {
         </CardHeader>
 
         <CardContent>
+          <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição ou categoria" />
+            <Select value={periodFilter} onValueChange={setPeriodFilter}><SelectTrigger><SelectValue placeholder="Período" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todo o período</SelectItem><SelectItem value="CURRENT_MONTH">Este mês</SelectItem><SelectItem value="PREVIOUS_MONTH">Mês anterior</SelectItem></SelectContent></Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todas as categorias</SelectItem><SelectItem value="Salary">Salário</SelectItem><SelectItem value="Freelance">Freelance</SelectItem><SelectItem value="Bonus">Bônus</SelectItem><SelectItem value="Investment">Investimento</SelectItem><SelectItem value="Gift">Presente</SelectItem><SelectItem value="Other">Outros</SelectItem></SelectContent></Select>
+            <Select value={frequencyFilter} onValueChange={setFrequencyFilter}><SelectTrigger><SelectValue placeholder="Frequência" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todas as frequências</SelectItem><SelectItem value="One-time">Única</SelectItem><SelectItem value="Monthly">Mensal</SelectItem></SelectContent></Select>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -319,9 +340,11 @@ export default function IncomePage() {
             >
               No income added yet
             </p>
+          ) : filteredIncomes.length === 0 ? (
+            <p className="py-8 text-center" style={{ color: "var(--muted-foreground)" }}>Nenhuma receita encontrada para os filtros selecionados.</p>
           ) : (
             <ul className="space-y-3">
-              {incomes.map((inc) => (
+              {filteredIncomes.map((inc) => (
                 <li
                   key={inc.id}
                   className="p-3 rounded-lg border"

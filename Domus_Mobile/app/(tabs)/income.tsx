@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
 import dayjs from "dayjs";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/TextArea";
 import { Button } from "@/components/ui/Button";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { EditEntityModal } from "@/components/EditEntityModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { FeedbackToast } from "@/components/FeedbackToast";
@@ -30,6 +31,9 @@ const FREQUENCY_OPTIONS = [
   { label: "Mensal", value: "Monthly" },
 ];
 
+const PERIOD_FILTER_OPTIONS = [{ label: "Todo o período", value: "ALL" }, { label: "Este mês", value: "CURRENT_MONTH" }, { label: "Mês anterior", value: "PREVIOUS_MONTH" }];
+const FREQUENCY_FILTER_OPTIONS = [{ label: "Todas as frequências", value: "ALL" }, ...FREQUENCY_OPTIONS];
+
 export default function IncomeScreen() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
@@ -45,6 +49,10 @@ export default function IncomeScreen() {
   const [deletingIncome, setDeletingIncome] = useState<Income | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [search, setSearch] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [frequencyFilter, setFrequencyFilter] = useState("ALL");
 
   useEffect(() => {
     loadIncomes();
@@ -131,17 +139,26 @@ export default function IncomeScreen() {
     }
   };
 
+  const categoryFilterOptions = useMemo(() => [{ label: "Todas as categorias", value: "ALL" }, ...CATEGORY_OPTIONS], []);
+  const filteredIncomes = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("pt-BR");
+    return incomes.filter((income) => {
+      const incomeDate = dayjs(income.startDate);
+      return (!term || `${income.description} ${income.category}`.toLocaleLowerCase("pt-BR").includes(term))
+        && (categoryFilter === "ALL" || income.category === categoryFilter)
+        && (frequencyFilter === "ALL" || income.frequency === frequencyFilter)
+        && (periodFilter === "ALL"
+          || (periodFilter === "CURRENT_MONTH" && incomeDate.isSame(dayjs(), "month"))
+          || (periodFilter === "PREVIOUS_MONTH" && incomeDate.isSame(dayjs().subtract(1, "month"), "month")));
+    });
+  }, [categoryFilter, frequencyFilter, incomes, periodFilter, search]);
+  const hasActiveFilters = Boolean(search || periodFilter !== "ALL" || categoryFilter !== "ALL" || frequencyFilter !== "ALL");
+  const clearFilters = () => { setSearch(""); setPeriodFilter("ALL"); setCategoryFilter("ALL"); setFrequencyFilter("ALL"); };
+
   return (
     <View className="flex-1 bg-white dark:bg-slate-900">
-      <ScrollView contentContainerClassName="p-4 gap-4">
-        <View className="flex-row items-center gap-2">
-          <View className="p-2 rounded-lg bg-financial-incomeLight dark:bg-financial-incomeLightDark">
-            <Ionicons name="wallet" size={22} color="#10b981" />
-          </View>
-          <Text className="text-2xl font-bold text-financial-income dark:text-financial-incomeDark">
-            Adicionar Renda
-          </Text>
-        </View>
+      <ScrollView contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Receitas" subtitle="Registre e acompanhe suas entradas" icon="wallet" color="#10b981" backgroundClassName="bg-financial-incomeLight dark:bg-financial-incomeLightDark" />
 
         <Card>
           <CardHeader>
@@ -185,16 +202,20 @@ export default function IncomeScreen() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Rendas Recentes</CardTitle>
+            <View className="flex-row items-center justify-between gap-3"><View className="flex-1"><CardTitle>Receitas</CardTitle><Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">{filteredIncomes.length} de {incomes.length} lançamento(s)</Text></View>{hasActiveFilters && <Button size="sm" variant="ghost" onPress={clearFilters}>Limpar filtros</Button>}</View>
           </CardHeader>
-          <CardContent>
+          <CardContent className="gap-4">
+            <Input value={search} onChangeText={setSearch} placeholder="Buscar descrição ou categoria" returnKeyType="search" />
+            <View className="gap-3"><Select value={periodFilter} onValueChange={setPeriodFilter} options={PERIOD_FILTER_OPTIONS} placeholder="Período" /><Select value={categoryFilter} onValueChange={setCategoryFilter} options={categoryFilterOptions} placeholder="Categoria" /><Select value={frequencyFilter} onValueChange={setFrequencyFilter} options={FREQUENCY_FILTER_OPTIONS} placeholder="Frequência" /></View>
             {incomes.length === 0 ? (
               <Text className="text-center py-4 text-mutedForeground dark:text-mutedForegroundDark">
                 Nenhuma renda cadastrada ainda
               </Text>
+            ) : filteredIncomes.length === 0 ? (
+              <View className="items-center gap-2 py-8"><Ionicons name="funnel-outline" size={28} color="#94a3b8" /><Text className="font-medium text-cardForeground dark:text-cardForegroundDark">Nenhuma receita encontrada</Text><Text className="text-center text-sm text-mutedForeground dark:text-mutedForegroundDark">Ajuste ou limpe os filtros para ver outros lançamentos.</Text></View>
             ) : (
               <FlatList
-                data={incomes}
+                data={filteredIncomes}
                 keyExtractor={(item) => String(item.id)}
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View className="h-3" />}

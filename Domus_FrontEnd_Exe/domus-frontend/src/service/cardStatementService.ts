@@ -1,0 +1,8 @@
+import { supabase } from "../lib/supabase";
+export interface CardStatementItem { outgoingId:number; description:string; value:number; transactionDate:string; }
+export interface ReconciledStatement { difference:number; reconciliationStatus:"open"|"reconciled"|"needs_review"; }
+type ItemRow={outgoing_id:number;description:string;value:number|string;transaction_date:string}; type StatementRow={difference:number|string;reconciliation_status:ReconciledStatement["reconciliationStatus"]};
+export const cardStatementService={
+ async preview(cardId:number,month:string):Promise<CardStatementItem[]>{const{data,error}=await supabase.rpc("domus_card_statement_items",{p_credit_card_id:cardId,p_statement_month:`${month}-01`});if(error)throw error;return((data??[])as ItemRow[]).map(row=>({outgoingId:row.outgoing_id,description:row.description,value:Number(row.value),transactionDate:row.transaction_date}));},
+ async reconcile(cardId:number,month:string,bankTotal:number,notes?:string):Promise<ReconciledStatement>{const{data,error}=await supabase.rpc("domus_reconcile_card_statement",{p_credit_card_id:cardId,p_statement_month:`${month}-01`,p_bank_total:bankTotal,p_notes:notes?.trim()||null});if(error)throw error;const row=(data as StatementRow[]|null)?.[0];if(!row)throw new Error("A conferência não retornou resultado.");return{difference:Number(row.difference),reconciliationStatus:row.reconciliation_status};},
+};

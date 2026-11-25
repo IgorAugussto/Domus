@@ -1,5 +1,6 @@
-const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog, ipcMain, safeStorage } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs/promises');
 const log = require('electron-log/main');
 
 // Precisa bater com uma origem já liberada em SecurityConfig#corsConfigurationSource
@@ -17,6 +18,50 @@ log.transports.file.level = 'info';
 log.transports.console.level = isDev ? 'debug' : 'info';
 
 let mainWindow;
+
+const sessionStoragePath = () => path.join(app.getPath('userData'), 'supabase-session.bin');
+
+async function readEncryptedSession() {
+  try {
+    const encrypted = await fs.readFile(sessionStoragePath());
+    return safeStorage.decryptString(encrypted);
+  } catch (error) {
+    if (error && error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+async function writeEncryptedSession(value) {
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error('Armazenamento seguro do sistema indisponível.');
+  }
+  await fs.writeFile(sessionStoragePath(), safeStorage.encryptString(value), { mode: 0o600 });
+}
+
+async function removeEncryptedSession() {
+  try {
+    await fs.unlink(sessionStoragePath());
+  } catch (error) {
+    if (!error || error.code !== 'ENOENT') throw error;
+  }
+}
+
+ipcMain.handle('domus:session:get', async (_event, key) => {
+  if (key !== 'supabase.auth.token') return null;
+  return readEncryptedSession();
+});
+
+ipcMain.handle('domus:session:set', async (_event, key, value) => {
+  if (key !== 'supabase.auth.token' || typeof value !== 'string') {
+    throw new Error('Chave de sessão inválida.');
+  }
+  await writeEncryptedSession(value);
+});
+
+ipcMain.handle('domus:session:remove', async (_event, key) => {
+  if (key !== 'supabase.auth.token') return;
+  await removeEncryptedSession();
+});
 
 function createWindow() {
   mainWindow = new BrowserWindow({

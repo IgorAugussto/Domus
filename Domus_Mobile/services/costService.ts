@@ -1,81 +1,16 @@
-import api from "../lib/api";
-
+import { currentDomusUserId, requireData, withoutUndefined } from "../lib/financial";
+import { supabase } from "../lib/supabase";
 export type PaymentType = "Cartão de Crédito" | "Boleto";
-
-export interface Cost {
-  id: number;
-  description: string;
-  value: number;
-  startDate: string;
-  category: string;
-  frequency: string;
-  durationInMonths: number;
-  paymentType: PaymentType;
-  paid: boolean;
-}
-
-export interface CostCreateInput {
-  amount: number; // valor que o usuário digita
-  description: string;
-  startDate: string;
-  category: string;
-  frequency: string;
-  durationInMonths: number;
-  paymentType: PaymentType;
-  paid?: boolean; // opcional
-}
-
-export interface CostUpdateInput {
-  amount?: number; // pode vir como amount (novo) ou value (antigo)
-  value?: number; // mantemos compatibilidade
-  description?: string;
-  startDate?: string;
-  category?: string;
-  frequency?: string;
-  durationInMonths?: number;
-  paymentType?: PaymentType;
-  paid?: boolean;
-}
-
+export type ExpenseOrigin = "manual" | "notification" | "statement_import";
+export interface Cost { id: number; description: string; value: number; startDate: string; category: string; frequency: string; durationInMonths: number; paymentType: PaymentType; paid: boolean; creditCardId?: number; origin: ExpenseOrigin; reviewed: boolean; purchaseAt?: string; }
+export interface CostCreateInput { amount: number; description: string; startDate: string; category: string; frequency: string; durationInMonths: number; paymentType: PaymentType; paid?: boolean; creditCardId?: number; }
+export interface CostUpdateInput extends Partial<CostCreateInput> { value?: number; }
+type Row = { id:number; description:string; value:number|string; start_date:string; category:string|null; frequency:string; duration_in_months:number; payment_type:PaymentType; paid:boolean; credit_card_id:number|null; origin:ExpenseOrigin|null; reviewed:boolean|null; purchase_at:string|null; };
+const map = (r:Row):Cost => ({id:r.id,description:r.description,value:Number(r.value),startDate:r.start_date,category:r.category??"",frequency:r.frequency,durationInMonths:r.duration_in_months,paymentType:r.payment_type,paid:r.paid,creditCardId:r.credit_card_id??undefined,origin:r.origin??"manual",reviewed:r.reviewed??true,purchaseAt:r.purchase_at??undefined});
 export const costService = {
-  create: async (data: CostCreateInput) => {
-    return api.post("/costs", {
-      value: data.amount,
-      description: data.description,
-      startDate: data.startDate,
-      category: data.category,
-      frequency: data.frequency,
-      durationInMonths: data.durationInMonths,
-      paymentType: data.paymentType,
-      paid: data.paid ?? false,
-    });
-  },
-
-  getAll: async () => {
-    const response = await api.get("/costs?size=9999");
-    return response.data.content ?? [];
-  },
-
-  getTotal: async () => {
-    const response = await api.get("/costs/total");
-    return response.data;
-  },
-
-  update: async (id: number, data: CostUpdateInput) => {
-    const payload = {
-      value: data.amount ?? data.value, // prioriza amount (novo valor do modal)
-      description: data.description,
-      startDate: data.startDate,
-      category: data.category,
-      frequency: data.frequency,
-      durationInMonths: data.durationInMonths,
-      paymentType: data.paymentType,
-      paid: data.paid,
-    };
-    return api.put(`/costs/${id}`, payload);
-  },
-
-  delete: async (id: number) => {
-    return api.delete(`/costs/${id}`);
-  },
+  create: async (d:CostCreateInput) => { const userId=await currentDomusUserId(); const {data,error}=await supabase.from("outgoing").insert({user_id:userId,value:d.amount,description:d.description,start_date:d.startDate,category:d.category,frequency:d.frequency,duration_in_months:d.frequency==="One-time"?1:d.durationInMonths,payment_type:d.paymentType,paid:d.paid??false,credit_card_id:d.creditCardId??null}).select().single(); return map(requireData(data as Row|null,error)); },
+  getAll: async ():Promise<Cost[]> => { const {data,error}=await supabase.from("outgoing").select("id,description,value,start_date,category,frequency,duration_in_months,payment_type,paid,credit_card_id,origin,reviewed,purchase_at").order("start_date",{ascending:false}); if(error)throw error; return (data as Row[]).map(map); },
+  getTotal: async () => (await costService.getAll()).reduce((sum,item)=>sum+item.value,0),
+  update: async (id:number,d:CostUpdateInput) => { const patch=withoutUndefined({value:d.amount??d.value,description:d.description,start_date:d.startDate,category:d.category,frequency:d.frequency,duration_in_months:d.frequency==="One-time"?1:d.durationInMonths,payment_type:d.paymentType,paid:d.paid,credit_card_id:d.creditCardId}); const {data,error}=await supabase.from("outgoing").update(patch).eq("id",id).select().single(); return map(requireData(data as Row|null,error)); },
+  delete: async (id:number) => {const {error}=await supabase.from("outgoing").delete().eq("id",id);if(error)throw error;},
 };

@@ -8,8 +8,9 @@ import IncomePage from "./components/IncomePage";
 import InvestmentsPage from "./components/InvestmentsPage";
 import LoginPage from "./components/LoginPage";
 import PrivateLayout from "./layouts/PrivateLayout";
-import RegisterPage from "./components/RegisterPage";
 import { Payments } from "./components/Payments";
+import { NotificationReviewPage } from "./components/NotificationReviewPage";
+import { CardStatementsPage } from "./components/CardStatementsPage";
 
 
 
@@ -20,7 +21,6 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
 
         {/* ROTAS PROTEGIDAS COM NAVEGAÇÃO */}
         <Route element={<PrivateLayout />}>
@@ -29,6 +29,8 @@ export default function App() {
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/investments" element={<InvestmentsPage />} />
           <Route path="/payments" element={<Payments />} />
+          <Route path="/review" element={<NotificationReviewPage />} />
+          <Route path="/cards" element={<CardStatementsPage />} />
         </Route>
       </Routes>
     </AuthProvider>

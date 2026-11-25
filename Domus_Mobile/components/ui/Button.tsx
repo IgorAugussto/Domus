@@ -8,8 +8,8 @@ type Variant = "default" | "outline" | "destructive" | "ghost";
 type Size = "default" | "sm" | "lg";
 
 const variantClasses: Record<Variant, string> = {
-  default: "bg-financial-trust dark:bg-financial-trustDark",
-  outline: "bg-transparent border border-border dark:border-borderDark",
+  default: "bg-financial-trust shadow-sm shadow-financial-trust/30 dark:bg-financial-trustDark",
+  outline: "bg-card border border-border dark:bg-cardDark dark:border-borderDark",
   destructive: "bg-financial-danger dark:bg-financial-dangerDark",
   ghost: "bg-transparent",
 };
@@ -22,9 +22,9 @@ const variantTextClasses: Record<Variant, string> = {
 };
 
 const sizeClasses: Record<Size, string> = {
-  default: "h-11 px-4",
-  sm: "h-9 px-3",
-  lg: "h-12 px-6",
+  default: "h-12 px-4",
+  sm: "h-10 px-3",
+  lg: "h-14 px-6",
 };
 
 interface ButtonProps extends Omit<PressableProps, "children"> {
@@ -48,13 +48,14 @@ export function Button({
     <Pressable
       disabled={disabled}
       className={cn(
-        "flex-row items-center justify-center gap-2 rounded-lg",
+        "flex-row items-center justify-center gap-2 rounded-xl active:opacity-80",
         variantClasses[variant],
         sizeClasses[size],
         Boolean(disabled) && "opacity-50",
         className,
       )}
       {...props}
+      android_ripple={{ color: "#ffffff22" }}
     >
       {typeof children === "string" ? (
         <Text className={cn("text-base font-semibold", variantTextClasses[variant], textClassName)}>

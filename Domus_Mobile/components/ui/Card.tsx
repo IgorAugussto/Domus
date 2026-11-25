@@ -8,7 +8,7 @@ function Card({ className, ...props }: ViewProps & { className?: string }) {
   return (
     <View
       className={cn(
-        "bg-card dark:bg-cardDark border border-border dark:border-borderDark rounded-xl",
+        "bg-card dark:bg-cardDark border border-border dark:border-borderDark rounded-2xl shadow-sm shadow-slate-900/5",
         className,
       )}
       {...props}
@@ -17,7 +17,7 @@ function Card({ className, ...props }: ViewProps & { className?: string }) {
 }
 
 function CardHeader({ className, ...props }: ViewProps & { className?: string }) {
-  return <View className={cn("gap-1.5 px-6 pt-6 pb-4", className)} {...props} />;
+    return <View className={cn("gap-1.5 px-5 pt-5 pb-3", className)} {...props} />;
 }
 
 function CardTitle({ className, ...props }: TextProps & { className?: string }) {
@@ -42,11 +42,11 @@ function CardDescription({ className, ...props }: TextProps & { className?: stri
 }
 
 function CardContent({ className, ...props }: ViewProps & { className?: string }) {
-  return <View className={cn("px-6 pb-6", className)} {...props} />;
+    return <View className={cn("px-5 pb-5", className)} {...props} />;
 }
 
 function CardFooter({ className, ...props }: ViewProps & { className?: string }) {
-  return <View className={cn("flex-row items-center px-6 pb-6", className)} {...props} />;
+    return <View className={cn("flex-row items-center px-5 pb-5", className)} {...props} />;
 }
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };

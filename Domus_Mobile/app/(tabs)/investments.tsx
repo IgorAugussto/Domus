@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/TextArea";
 import { Button } from "@/components/ui/Button";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { EditEntityModal } from "@/components/EditEntityModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { FeedbackToast } from "@/components/FeedbackToast";
@@ -119,15 +120,8 @@ export default function InvestmentsScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900">
-      <ScrollView contentContainerClassName="p-4 gap-4">
-        <View className="flex-row items-center gap-2">
-          <View className="p-2 rounded-lg bg-financial-investmentLight dark:bg-financial-investmentLightDark">
-            <Ionicons name="trending-up" size={22} color="#f59e0b" />
-          </View>
-          <Text className="text-2xl font-bold text-financial-investment dark:text-financial-investmentDark">
-            Adicionar Investimento
-          </Text>
-        </View>
+      <ScrollView contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Investimentos" subtitle="Organize sua carteira e projeções" icon="trending-up" color="#f59e0b" backgroundClassName="bg-financial-investmentLight dark:bg-financial-investmentLightDark" />
 
         <Card>
           <CardHeader>

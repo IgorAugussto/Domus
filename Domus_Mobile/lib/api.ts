@@ -3,7 +3,7 @@ import { router } from "expo-router";
 
 const api = axios.create({
   baseURL: process.env.EXPO_PUBLIC_API_URL,
-  timeout: 60000,
+  timeout: 15000,
   withCredentials: true, // envia o cookie jwt automaticamente em toda request
 });
 
@@ -22,9 +22,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // A verificação silenciosa acontece durante a inicialização. Se a API
+    // estiver indisponível, não deve bloquear a abertura da tela de login.
+    if (config?._silentAuth) return Promise.reject(error);
+
     if (!config) return Promise.reject(error);
 
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 1;
     config.__retryCount = config.__retryCount || 0;
 
     const shouldRetry = !error.response || error.response.status >= 500;

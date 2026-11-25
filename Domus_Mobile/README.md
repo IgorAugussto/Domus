@@ -50,3 +50,47 @@ Mesma organização conceitual do `domus-frontend` (`lib/api.ts`, `services/*`, 
 - `app/(auth)/` — login e registro (rotas públicas)
 - `app/(tabs)/` — Dashboard, Receitas, Despesas, Investimentos, Pagamentos (rotas protegidas)
 - `components/ui/` — primitivos de UI com NativeWind (Card, Button, Input, Label, Select, TextArea)
+
+## Laboratório local de notificações
+
+O app possui uma aba `Laboratório` para validar a captura sem realizar compras. A POC:
+
+- mantém configurações, fila nativa e registros em `AsyncStorage`/`SharedPreferences` no dispositivo;
+- emite notificações locais reais do Android nos formatos Carteira do Google e Nubank;
+- testa uma compra duplicada em duas fontes e duas compras distintas com o mesmo valor;
+- marca cada registro como `SIMULADA` ou `REAL`;
+- separa a captura real (Carteira do Google/Nubank) do modo de testes;
+- só permite monitorar WhatsApp no modo de testes e aceita apenas mensagens com o marcador `[DOMUS TESTE]`;
+- mantém a captura e o texto bruto somente no dispositivo; pela ação explícita
+  **Sincronizar**, envia ao Supabase apenas os campos financeiros normalizados
+  (valor, estabelecimento, data, origem e identificador idempotente). Não envia
+  título ou corpo bruto da notificação.
+
+Após entrar com sua conta Supabase, a tela **Revisar lançamentos sincronizados**
+mostra as capturas pendentes e permite confirmá-las. Essa tela usa as mesmas
+políticas RLS que web e Electron.
+
+O `NotificationListenerService` exige um development build Android, não Expo Go. Para validar:
+
+1. Ative a captura de notificações na aba Laboratório.
+2. Selecione Carteira do Google e/ou Nubank e abra o acesso especial às notificações.
+3. Para simulações, ative também o modo de testes e selecione `Simulador Domus`.
+4. Emita uma notificação simulada, depois use os botões de duplicidade e de mesmo valor.
+5. Ao ativar a captura, o listener também verifica notificações ainda visíveis na central do Android.
+
+O módulo nativo está em `modules/domus-notification-listener/` e o parser/deduplicação em `src/poc/`.
+
+## Supabase (Fase 2)
+
+O login agora usa Supabase Auth. Sem incluir valores no Git, configure localmente
+as variáveis públicas já disponíveis no projeto Supabase:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+```
+
+O primeiro login chama a função SQL `ensure_current_domus_user`, definida nas
+migrações versionadas em `../supabase/migrations/`. Portanto, aplique as
+migrações antes de validar o login. O cadastro público não existe no aplicativo:
+o usuário é provisionado administrativamente no Supabase Auth.

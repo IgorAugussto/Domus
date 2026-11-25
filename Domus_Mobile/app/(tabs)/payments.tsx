@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { FeedbackToast } from "@/components/FeedbackToast";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { paymentStatusService, type PaymentMonthItem } from "@/services/paymentStatusService";
 
 const MONTH_NAMES: Record<string, string> = {
@@ -115,17 +116,11 @@ export default function PaymentsScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => String(item.outgoingId)}
-        contentContainerClassName="p-4 gap-3"
+        contentContainerClassName="gap-3 p-4 pb-28"
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View className="gap-4 mb-2">
-            <View>
-              <Text className="text-xl font-bold text-financial-trust dark:text-financial-trustDark">
-                💳 Pagamentos
-              </Text>
-              <Text className="text-sm text-mutedForeground dark:text-mutedForegroundDark">
-                Acompanhe o que ainda precisa ser pago
-              </Text>
-            </View>
+            <ScreenHeader title="Pagamentos" subtitle="Acompanhe o que ainda precisa ser pago" icon="card" />
 
             <View className="flex-row gap-1 p-1 rounded-xl border border-border dark:border-borderDark self-start">
               {FILTER_OPTIONS.map((opt) => {

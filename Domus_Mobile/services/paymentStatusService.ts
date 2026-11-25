@@ -1,29 +1,8 @@
-import api from "../lib/api";
-
-export interface PaymentMonthItem {
-  outgoingId: number;
-  description: string;
-  value: number;
-  category: string;
-  paymentType: string;
-  frequency: string;
-  startDate: string;
-  yearMonth: string;
-  paid: boolean;
-}
-
-export const paymentStatusService = {
-  getByMonth: async (yearMonth: string): Promise<PaymentMonthItem[]> => {
-    const response = await api.get("/payment-status", {
-      params: { yearMonth },
-    });
-    return response.data;
-  },
-
-  toggle: async (outgoingId: number, yearMonth: string, paid: boolean): Promise<PaymentMonthItem> => {
-    const response = await api.put(`/payment-status/${outgoingId}`, null, {
-      params: { yearMonth, paid },
-    });
-    return response.data;
-  },
+import { supabase } from "../lib/supabase";
+export interface PaymentMonthItem { outgoingId:number; description:string; value:number; category:string; paymentType:string; frequency:string; startDate:string; yearMonth:string; paid:boolean; creditCardId?:number; }
+type Row={outgoing_id:number;description:string;value:number|string;category:string|null;payment_type:string;frequency:string;start_date:string;year_month:string;paid:boolean;credit_card_id:number|null};
+const map=(r:Row):PaymentMonthItem=>({outgoingId:r.outgoing_id,description:r.description,value:Number(r.value),category:r.category??"",paymentType:r.payment_type,frequency:r.frequency,startDate:r.start_date,yearMonth:r.year_month,paid:r.paid,creditCardId:r.credit_card_id??undefined});
+export const paymentStatusService={
+ getByMonth:async(yearMonth:string):Promise<PaymentMonthItem[]>=>{const{data,error}=await supabase.rpc("domus_monthly_payments",{p_year_month:yearMonth});if(error)throw error;return(data as Row[]).map(map);},
+ toggle:async(outgoingId:number,yearMonth:string,paid:boolean):Promise<PaymentMonthItem>=>{const{data,error}=await supabase.rpc("domus_set_payment_status",{p_outgoing_id:outgoingId,p_year_month:yearMonth,p_paid:paid});if(error)throw error;const row=(data as Row[])[0];if(!row)throw new Error("Pagamento não encontrado.");return map(row);},
 };

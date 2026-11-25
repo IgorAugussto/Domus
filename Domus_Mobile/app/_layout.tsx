@@ -6,13 +6,13 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 
-import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider as AppThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: '(tabs)',
 };
 
 function AuthGate({ children }: { children: ReactNode }) {
@@ -22,24 +22,14 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
-
     const inAuthGroup = segments[0] === '(auth)';
-
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
-    }
-  }, [isAuthenticated, isLoading, segments, router]);
+    if (!isAuthenticated && !inAuthGroup) router.replace('/login');
+    if (isAuthenticated && inAuthGroup) router.replace('/(tabs)');
+  }, [isAuthenticated, isLoading, router, segments]);
 
   if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-card dark:bg-cardDark">
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return <View className="flex-1 items-center justify-center bg-card dark:bg-cardDark"><ActivityIndicator size="large" /></View>;
   }
-
   return children;
 }
 
@@ -49,7 +39,7 @@ function RootLayoutNav() {
   return (
     <NavThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthGate>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack initialRouteName="(tabs)" screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>
@@ -61,10 +51,6 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AppThemeProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
-    </AppThemeProvider>
+    <AppThemeProvider><AuthProvider><RootLayoutNav /></AuthProvider></AppThemeProvider>
   );
 }

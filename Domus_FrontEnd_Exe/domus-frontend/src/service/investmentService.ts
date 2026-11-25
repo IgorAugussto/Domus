@@ -1,72 +1,14 @@
-// src/services/investmentService.ts
-import api from '../lib/api';
-
-// Interface baseada no seu InvestmentsRequest/Response
-export interface Investment {
-  id?: string;
-  description: string;
-  value: number;
-  startDate: string;
-  endDate: string;
-  typeInvestments: string;        // opcional, se tiver
-  expectedReturn: number; // opcional
-}
-
-export interface InvestmentCreateInput {
-  amount: number;
-  description: string;
-  startDate: string;
-  endDate: string;
-  type: string;              // tipo do investimento
-  expectedReturn: number;    // retorno esperado
-}
-
-export interface InvestmentUpdateInput {
-  amount?: number;
-  description?: string;
-  startDate?: string;
-  endDate?: string;
-  category?: string;
-  typeInvestments?: string;
-  expectedReturn?: number;
-}
-
-// Dados que você envia pro back
-export const investmentService = {
-  create: async (data: InvestmentCreateInput) => {
-    return api.post("/investments", {
-      value: data.amount,
-      description: data.description,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      typeInvestments: data.type,
-      expectedReturn: data.expectedReturn
-    });
-  },
-
-  getAll: async () => {
-    const response = await api.get("/investments?size=9999");
-    return response.data.content ?? [];
-  },
-
-  getTotal: async () => {
-    const response = await api.get("/investments/total");
-    return response.data;
-  },
-
-  update: async (id: number, data: InvestmentUpdateInput) => {
-      return api.put(`/investments/${id}`, {
-        value: data.amount,
-        description: data.description,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        category: data.category,
-        typeInvestments: data.typeInvestments,
-        expectedReturn: data.expectedReturn
-      });
-    },
-  
-    delete: async (id: number) => {
-      return api.delete(`/investments/${id}`);
-    },
+import { currentDomusUserId, requireData, withoutUndefined } from "../lib/financial";
+import { supabase } from "../lib/supabase";
+export interface Investment { id?: string; description: string; value: number; startDate: string; endDate: string; typeInvestments: string; expectedReturn: number; }
+export interface InvestmentCreateInput { amount:number; description:string; startDate:string; endDate:string; type:string; expectedReturn:number; }
+export interface InvestmentUpdateInput { amount?:number; description?:string; startDate?:string; endDate?:string; typeInvestments?:string; expectedReturn?:number; }
+type Row={id:number;description:string|null;value:number|string;start_date:string;end_date:string;type_investments:string;expected_return:number|string};
+const map=(r:Row):Investment=>({id:String(r.id),description:r.description??"",value:Number(r.value),startDate:r.start_date,endDate:r.end_date,typeInvestments:r.type_investments,expectedReturn:Number(r.expected_return)});
+export const investmentService={
+ create:async(d:InvestmentCreateInput)=>{const userId=await currentDomusUserId();const {data,error}=await supabase.from("investments").insert({user_id:userId,value:d.amount,description:d.description||null,start_date:d.startDate,end_date:d.endDate,type_investments:d.type,expected_return:d.expectedReturn}).select().single();return map(requireData(data as Row|null,error));},
+ getAll:async():Promise<Investment[]>=>{const{data,error}=await supabase.from("investments").select("id,description,value,start_date,end_date,type_investments,expected_return").order("start_date",{ascending:true});if(error)throw error;return(data as Row[]).map(map);},
+ getTotal:async()=> (await investmentService.getAll()).reduce((sum,item)=>sum+item.value,0),
+ update:async(id:number,d:InvestmentUpdateInput)=>{const{data,error}=await supabase.from("investments").update(withoutUndefined({value:d.amount,description:d.description,start_date:d.startDate,end_date:d.endDate,type_investments:d.typeInvestments,expected_return:d.expectedReturn})).eq("id",id).select().single();return map(requireData(data as Row|null,error));},
+ delete:async(id:number)=>{const{error}=await supabase.from("investments").delete().eq("id",id);if(error)throw error;},
 };
