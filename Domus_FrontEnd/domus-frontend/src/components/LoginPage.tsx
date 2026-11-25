@@ -27,8 +27,8 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate("/dashboard");
-    } catch {
-      alert("Login falhou!");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Login falhou!");
     } finally {
       setLoading(false);
     }
@@ -58,18 +58,6 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent>
-          {/* DEMO LOGIN INFO */}
-          <div className="mb-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3 text-sm text-blue-200">
-            <strong className="block text-blue-300">Conta demo</strong>
-            <span>Email:</span> demo@domus.app
-            <br />
-            <span>Senha:</span> lkjsfg25
-            <br />
-            <span className="block mt-2 text-xs text-blue-300/80">
-              Dados reiniciados periodicamente
-            </span>
-          </div>
-
           <form onSubmit={handleLogin} className="space-y-4">
             {/* EMAIL */}
             <div className="space-y-1">
@@ -113,17 +101,6 @@ export default function LoginPage() {
                 className="accent-blue-500"
               />
               <label htmlFor="showPassword">Mostrar senha</label>
-            </div>
-
-            {/* REGISTER */}
-            <div className="text-center text-sm text-slate-300">
-              Não tem conta?{" "}
-              <span
-                className="text-blue-400 hover:underline cursor-pointer"
-                onClick={() => navigate("/register")}
-              >
-                Cadastre-se
-              </span>
             </div>
 
             {/* BUTTON */}

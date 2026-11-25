@@ -1,0 +1,15 @@
+{
+  "name": "domus-notification-listener",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "private": true,
+  "dependencies": {
+    "expo": "*",
+    "expo-modules-core": "*"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

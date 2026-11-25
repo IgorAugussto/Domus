@@ -16,7 +16,7 @@ export function Textarea({
       textAlignVertical="top"
       placeholderTextColor="#94a3b8"
       className={cn(
-        "w-full rounded-lg border border-border dark:border-borderDark px-3 py-2 text-base text-cardForeground dark:text-cardForegroundDark bg-card dark:bg-cardDark",
+        "w-full rounded-xl border border-border bg-card px-3.5 py-3 text-base text-cardForeground focus:border-financial-trust dark:border-borderDark dark:bg-cardDark dark:text-cardForegroundDark",
         className,
       )}
       style={{ minHeight: rows * 20 + 16 }}

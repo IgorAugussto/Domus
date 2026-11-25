@@ -1,10 +1,10 @@
 // src/components/Navigation.tsx
 import { Button } from '../ui-components/button';
-import { DollarSign, TrendingUp, LogOut, Wallet, BarChart3, Sun, Moon, CreditCard, IdCard } from 'lucide-react';
+import { DollarSign, TrendingUp, LogOut, Wallet, BarChart3, Sun, Moon, CreditCard, IdCard, BellRing } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { useLocation } from "react-router-dom";
 
-type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards';
+type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards' | 'statements' | 'review';
 
 interface NavigationProps {
   onPageChange: (page: Page) => void;
@@ -92,6 +92,17 @@ export default function Navigation({ onPageChange, onLogout }: NavigationProps) 
             >
               <IdCard className="h-4 w-4" />
               Cartões
+            </Button>
+            <Button variant={currentPage === 'statements' ? 'navActiveCards' : 'navButton'} onClick={() => onPageChange('statements')} className="flex items-center gap-2 transition-all">
+              <CreditCard className="h-4 w-4" /> Faturas
+            </Button>
+            <Button
+              variant={currentPage === 'review' ? 'navActivePayments' : 'navButton'}
+              onClick={() => onPageChange('review')}
+              className="flex items-center gap-2 transition-all"
+            >
+              <BellRing className="h-4 w-4" />
+              Revisar
             </Button>
           </div>
         </div>

@@ -68,6 +68,8 @@ export function CreditCardsPage() {
   const [brand, setBrand] = useState("");
   const [lastFourDigits, setLastFourDigits] = useState("");
   const [nickname, setNickname] = useState("");
+  const [statementClosingDay, setStatementClosingDay] = useState("");
+  const [dueDay, setDueDay] = useState("");
 
   // ── Exclusão (soft delete) ──
   const [deletingCard, setDeletingCard] = useState<CreditCard | null>(null);
@@ -127,11 +129,15 @@ export function CreditCardsPage() {
         brand,
         lastFourDigits,
         nickname: nickname.trim() || undefined,
+        statementClosingDay: statementClosingDay ? Number(statementClosingDay) : undefined,
+        dueDay: dueDay ? Number(dueDay) : undefined,
       });
       await loadCards();
       setBrand("");
       setLastFourDigits("");
       setNickname("");
+      setStatementClosingDay("");
+      setDueDay("");
       setToast({ message: "Cartão cadastrado com sucesso!", type: "success" });
     } catch {
       setToast({ message: "Erro ao cadastrar cartão.", type: "error" });
@@ -188,7 +194,7 @@ export function CreditCardsPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="brand">Bandeira</Label>
                 <Select value={brand} onValueChange={setBrand}>
@@ -230,6 +236,14 @@ export function CreditCardsPage() {
                   style={{ borderColor: "var(--border)" }}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="statementClosingDay">Dia de fechamento</Label>
+                <Input id="statementClosingDay" inputMode="numeric" maxLength={2} placeholder="Ex: 10" value={statementClosingDay} onChange={(e) => setStatementClosingDay(e.target.value.replace(/\D/g, "").slice(0, 2))} style={{ borderColor: "var(--border)" }} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dueDay">Dia de vencimento</Label>
+                <Input id="dueDay" inputMode="numeric" maxLength={2} placeholder="Ex: 17" value={dueDay} onChange={(e) => setDueDay(e.target.value.replace(/\D/g, "").slice(0, 2))} style={{ borderColor: "var(--border)" }} />
+              </div>
             </div>
 
             <Button
@@ -263,7 +277,7 @@ export function CreditCardsPage() {
                   style={{ borderColor: "var(--border)", background: "var(--card)" }}
                 >
                   <span className="font-medium" style={{ color: "var(--card-foreground)" }}>
-                    {cardLabel(card)}
+                    {cardLabel(card)}{card.statementClosingDay ? ` · fecha dia ${card.statementClosingDay}` : ""}{card.dueDay ? ` · vence dia ${card.dueDay}` : ""}
                   </span>
                   <button
                     type="button"

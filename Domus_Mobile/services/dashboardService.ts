@@ -1,40 +1,12 @@
-import api from "../lib/api";
-
-export interface MonthlyProjection {
-  month: string;
-  income: number;
-  expenses: number;
-  investments: number;
-}
-
-export interface YearlyProjection {
-  period: string; // "2025-01" ou "2025-01-15"
-  income: number;
-  expenses: number;
-  investments: number;
-}
-
-export const dashboardService = {
-  getSummary: async () => {
-    const response = await api.get("/dashboard/summary");
-    return response.data;
-  },
-
-  getMonthlyProjection: async (): Promise<MonthlyProjection[]> => {
-    const response = await api.get("/dashboard/projection/month");
-    return Array.isArray(response.data) ? response.data : [];
-  },
-
-  getYearlyProjection: async (year?: number): Promise<YearlyProjection[]> => {
-    const params = year ? { year } : {};
-    const response = await api.get("/dashboard/projection/year", { params });
-    return Array.isArray(response.data) ? response.data : [];
-  },
-
-  getMonthlySummary: async (month: string) => {
-    const response = await api.get("/dashboard/summary/monthly", {
-      params: { month },
-    });
-    return response.data;
-  },
+import { supabase } from "../lib/supabase";
+export interface MonthlyProjection { month:string; income:number; expenses:number; investments:number; }
+export interface YearlyProjection { month:string; period:string; income:number; expenses:number; investments:number; }
+export interface MonthlySummary { month:string; income:number; expenses:number; investments:number; netWorth:number; savingsRate:number; }
+type ProjectionRow={month:string;income:number|string;expenses:number|string;investments:number|string};
+const map=(r:ProjectionRow):MonthlyProjection=>({month:r.month,income:Number(r.income),expenses:Number(r.expenses),investments:Number(r.investments)});
+export const dashboardService={
+ getSummary:async()=>{const year=new Date().getFullYear();const{data,error}=await supabase.rpc("domus_year_projection",{p_year:year});if(error)throw error;return data;},
+ getMonthlyProjection:async():Promise<MonthlyProjection[]>=>{const{data,error}=await supabase.rpc("domus_current_month_projection");if(error)throw error;return(data as ProjectionRow[]).map(map);},
+ getYearlyProjection:async(year?:number):Promise<YearlyProjection[]>=>{const{data,error}=await supabase.rpc("domus_year_projection",{p_year:year??new Date().getFullYear()});if(error)throw error;return(data as ProjectionRow[]).map((row)=>({month:row.month,period:row.month,income:Number(row.income),expenses:Number(row.expenses),investments:Number(row.investments)}));},
+ getMonthlySummary:async(month:string):Promise<MonthlySummary>=>{const{data,error}=await supabase.rpc("domus_monthly_summary",{p_year_month:month});if(error)throw error;const row=(data as unknown as Array<{month:string;income:number|string;expenses:number|string;investments:number|string;net_worth:number|string;savings_rate:number|string}>)[0];if(!row)throw new Error("Resumo mensal não encontrado.");return {month:row.month,income:Number(row.income),expenses:Number(row.expenses),investments:Number(row.investments),netWorth:Number(row.net_worth),savingsRate:Number(row.savings_rate)};},
 };

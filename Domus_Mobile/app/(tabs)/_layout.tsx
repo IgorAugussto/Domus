@@ -10,18 +10,24 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="index"
       screenOptions={{
         tabBarActiveTintColor: '#3b82f6',
         tabBarInactiveTintColor: theme === 'dark' ? '#94a3b8' : '#64748b',
         tabBarStyle: {
           backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
+          borderTopColor: theme === 'dark' ? '#334155' : '#e2e8f0',
+          height: 68,
+          paddingTop: 7,
+          paddingBottom: 7,
         },
         headerStyle: {
           backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
         },
         headerTintColor: theme === 'dark' ? '#e2e8f0' : '#1e293b',
         tabBarButton: HapticTab,
-        tabBarLabelStyle: { fontSize: 10 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarItemStyle: { borderRadius: 14, marginHorizontal: 2 },
         headerRight: () => <HeaderActions />,
       }}>
       <Tabs.Screen
@@ -46,17 +52,40 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="investments"
-        options={{
-          title: 'Investir',
-          tabBarIcon: ({ color }) => <Ionicons name="trending-up" size={22} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="payments"
         options={{
           title: 'Pagamentos',
           tabBarIcon: ({ color }) => <Ionicons name="card" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'Mais',
+          tabBarIcon: ({ color }) => <Ionicons name="menu" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="investments"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="review"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="cards"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="statements"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="notification-lab"
+        options={{
+          title: 'Ferramentas de desenvolvimento',
+          href: null,
         }}
       />
     </Tabs>

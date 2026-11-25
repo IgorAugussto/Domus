@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { View, Text, FlatList, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import dayjs from "dayjs";
 import * as DocumentPicker from "expo-document-picker";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/TextArea";
 import { Button } from "@/components/ui/Button";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { EditEntityModal } from "@/components/EditEntityModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { FeedbackToast } from "@/components/FeedbackToast";
@@ -39,6 +40,25 @@ const PAYMENT_TYPE_OPTIONS = [
   { label: "Boleto", value: "Boleto" },
 ];
 
+const PERIOD_FILTER_OPTIONS = [
+  { label: "Todo o período", value: "ALL" },
+  { label: "Este mês", value: "CURRENT_MONTH" },
+  { label: "Mês anterior", value: "PREVIOUS_MONTH" },
+];
+
+const ORIGIN_FILTER_OPTIONS = [
+  { label: "Todas as origens", value: "ALL" },
+  { label: "Lançadas manualmente", value: "manual" },
+  { label: "Capturadas por notificação", value: "notification" },
+  { label: "Importadas", value: "statement_import" },
+];
+
+const REVIEW_FILTER_OPTIONS = [
+  { label: "Todas", value: "ALL" },
+  { label: "Pendentes de revisão", value: "PENDING" },
+  { label: "Revisadas", value: "REVIEWED" },
+];
+
 export default function ExpensesScreen() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
@@ -55,6 +75,11 @@ export default function ExpensesScreen() {
   const [deletingCost, setDeletingCost] = useState<Cost | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [search, setSearch] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("ALL");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [originFilter, setOriginFilter] = useState("ALL");
+  const [reviewFilter, setReviewFilter] = useState("ALL");
 
   // ── Estados do import de extrato ──
   const [importing, setImporting] = useState(false);
@@ -228,17 +253,43 @@ export default function ExpensesScreen() {
     }
   };
 
+  const categoryFilterOptions = useMemo(
+    () => [{ label: "Todas as categorias", value: "ALL" }, ...CATEGORY_OPTIONS],
+    [],
+  );
+
+  const filteredCosts = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("pt-BR");
+    return costs.filter((cost) => {
+      const transactionDate = dayjs(cost.purchaseAt ?? cost.startDate);
+      const matchesSearch = !term || [cost.description, cost.category]
+        .some((value) => value.toLocaleLowerCase("pt-BR").includes(term));
+      const matchesPeriod = periodFilter === "ALL"
+        || (periodFilter === "CURRENT_MONTH" && transactionDate.isSame(dayjs(), "month"))
+        || (periodFilter === "PREVIOUS_MONTH" && transactionDate.isSame(dayjs().subtract(1, "month"), "month"));
+      const matchesCategory = categoryFilter === "ALL" || cost.category === categoryFilter;
+      const matchesOrigin = originFilter === "ALL" || cost.origin === originFilter;
+      const pendingReview = cost.origin === "notification" && !cost.reviewed;
+      const matchesReview = reviewFilter === "ALL"
+        || (reviewFilter === "PENDING" && pendingReview)
+        || (reviewFilter === "REVIEWED" && !pendingReview);
+      return matchesSearch && matchesPeriod && matchesCategory && matchesOrigin && matchesReview;
+    });
+  }, [categoryFilter, costs, originFilter, periodFilter, reviewFilter, search]);
+
+  const hasActiveFilters = Boolean(search || periodFilter !== "ALL" || categoryFilter !== "ALL" || originFilter !== "ALL" || reviewFilter !== "ALL");
+  const clearFilters = () => {
+    setSearch("");
+    setPeriodFilter("ALL");
+    setCategoryFilter("ALL");
+    setOriginFilter("ALL");
+    setReviewFilter("ALL");
+  };
+
   return (
     <View className="flex-1 bg-white dark:bg-slate-900">
-      <ScrollView contentContainerClassName="p-4 gap-4">
-        <View className="flex-row items-center gap-2">
-          <View className="p-2 rounded-lg bg-financial-dangerLight dark:bg-financial-dangerLightDark">
-            <Ionicons name="cash" size={22} color="#ef4444" />
-          </View>
-          <Text className="text-2xl font-bold text-financial-danger dark:text-financial-dangerDark">
-            Adicionar Despesa
-          </Text>
-        </View>
+      <ScrollView contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Despesas" subtitle="Controle seus gastos e compromissos" icon="cash" color="#ef4444" backgroundClassName="bg-financial-dangerLight dark:bg-financial-dangerLightDark" />
 
         <Card>
           <CardHeader>
@@ -371,16 +422,28 @@ export default function ExpensesScreen() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Despesas Recentes</CardTitle>
+            <View className="flex-row items-center justify-between gap-3">
+              <View className="flex-1"><CardTitle>Despesas</CardTitle><Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">{filteredCosts.length} de {costs.length} lançamento(s)</Text></View>
+              {hasActiveFilters && <Button size="sm" variant="ghost" onPress={clearFilters}>Limpar filtros</Button>}
+            </View>
           </CardHeader>
-          <CardContent>
+          <CardContent className="gap-4">
+            <Input value={search} onChangeText={setSearch} placeholder="Buscar por estabelecimento ou categoria" returnKeyType="search" />
+            <View className="gap-3">
+              <Select value={periodFilter} onValueChange={setPeriodFilter} options={PERIOD_FILTER_OPTIONS} placeholder="Período" />
+              <Select value={categoryFilter} onValueChange={setCategoryFilter} options={categoryFilterOptions} placeholder="Categoria" />
+              <Select value={originFilter} onValueChange={setOriginFilter} options={ORIGIN_FILTER_OPTIONS} placeholder="Origem" />
+              <Select value={reviewFilter} onValueChange={setReviewFilter} options={REVIEW_FILTER_OPTIONS} placeholder="Revisão" />
+            </View>
             {costs.length === 0 ? (
               <Text className="text-center py-4 text-mutedForeground dark:text-mutedForegroundDark">
                 Nenhuma despesa cadastrada ainda
               </Text>
+            ) : filteredCosts.length === 0 ? (
+              <View className="items-center gap-2 py-8"><Ionicons name="funnel-outline" size={28} color="#94a3b8" /><Text className="text-center font-medium text-cardForeground dark:text-cardForegroundDark">Nenhuma despesa encontrada</Text><Text className="text-center text-sm text-mutedForeground dark:text-mutedForegroundDark">Ajuste ou limpe os filtros para ver outros lançamentos.</Text></View>
             ) : (
               <FlatList
-                data={costs}
+                data={filteredCosts}
                 keyExtractor={(item) => String(item.id)}
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View className="h-3" />}
@@ -396,8 +459,11 @@ export default function ExpensesScreen() {
                       </Text>
                       {item.startDate && (
                         <Text className="text-xs mt-0.5 text-mutedForeground dark:text-mutedForegroundDark">
-                          {dayjs(item.startDate).format("MMMM [de] YYYY")}
+                          {dayjs(item.purchaseAt ?? item.startDate).format("DD [de] MMMM [de] YYYY")}
                         </Text>
+                      )}
+                      {item.origin === "notification" && (
+                        <Text className={`mt-1 self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.reviewed ? "bg-financial-trustLight text-financial-trust dark:bg-financial-trustLightDark dark:text-financial-trustDark" : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"}`}>{item.reviewed ? "CAPTURADA · REVISADA" : "CAPTURADA · PENDENTE"}</Text>
                       )}
                     </View>
 

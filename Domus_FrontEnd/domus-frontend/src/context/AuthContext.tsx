@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, type ReactNode } from 'react';
 import { authService, type AuthResponse } from '../service/authService';
 
 interface AuthUser {
+  id: string;
   email: string;
   name?: string;
 }
@@ -24,14 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     authService.getMe()
       .then((data: AuthResponse | null) => {
-        if (data) setUser({ email: data.email, name: data.nome });
+        if (data) setUser({ id: data.id, email: data.email, name: data.nome });
       })
+      .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
   }, []);
 
   const login = async (email: string, password: string) => {
     const response = await authService.login({ email, password });
-    setUser({ email: response.email, name: response.nome });
+    setUser({ id: response.id, email: response.email, name: response.nome });
   };
 
   const logout = async () => {

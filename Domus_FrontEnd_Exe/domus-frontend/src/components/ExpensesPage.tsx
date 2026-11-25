@@ -64,6 +64,10 @@ export default function ExpensesPage() {
     type: "success" | "error";
   } | null>(null);
   const [filter, setFilter] = useState<string>("ALL");
+  const [search, setSearch] = useState("");
+  const [originFilter, setOriginFilter] = useState("ALL");
+  const [reviewFilter, setReviewFilter] = useState("ALL");
+  const [periodFilter, setPeriodFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -288,8 +292,18 @@ export default function ExpensesPage() {
   };
 
   const filteredCosts = costs.filter((cost) => {
-    if (filter === "ALL") return true;
-    return cost.frequency === filter;
+    const searchTerm = search.trim().toLocaleLowerCase("pt-BR");
+    const date = new Date(`${cost.startDate}T00:00:00`);
+    const now = new Date();
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const pendingReview = cost.origin === "notification" && !cost.reviewed;
+    return (filter === "ALL" || cost.frequency === filter)
+      && (!searchTerm || `${cost.description} ${cost.category}`.toLocaleLowerCase("pt-BR").includes(searchTerm))
+      && (originFilter === "ALL" || cost.origin === originFilter)
+      && (reviewFilter === "ALL" || (reviewFilter === "PENDING" ? pendingReview : !pendingReview))
+      && (periodFilter === "ALL"
+        || (periodFilter === "CURRENT_MONTH" && date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth())
+        || (periodFilter === "PREVIOUS_MONTH" && date.getFullYear() === previousMonth.getFullYear() && date.getMonth() === previousMonth.getMonth()));
   });
 
   const totalPages = Math.ceil(filteredCosts.length / itemsPerPage);
@@ -708,6 +722,12 @@ export default function ExpensesPage() {
           </Select>
         </CardHeader>
         <CardContent>
+          <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <Input value={search} onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }} placeholder="Buscar estabelecimento ou categoria" />
+            <Select value={originFilter} onValueChange={(value) => { setOriginFilter(value); setCurrentPage(1); }}><SelectTrigger><SelectValue placeholder="Origem" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todas as origens</SelectItem><SelectItem value="manual">Manual</SelectItem><SelectItem value="notification">Notificação</SelectItem><SelectItem value="statement_import">Importada</SelectItem></SelectContent></Select>
+            <Select value={reviewFilter} onValueChange={(value) => { setReviewFilter(value); setCurrentPage(1); }}><SelectTrigger><SelectValue placeholder="Revisão" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todas as revisões</SelectItem><SelectItem value="PENDING">Pendentes de revisão</SelectItem><SelectItem value="REVIEWED">Revisadas</SelectItem></SelectContent></Select>
+            <Select value={periodFilter} onValueChange={(value) => { setPeriodFilter(value); setCurrentPage(1); }}><SelectTrigger><SelectValue placeholder="Período" /></SelectTrigger><SelectContent><SelectItem value="ALL">Todo o período</SelectItem><SelectItem value="CURRENT_MONTH">Este mês</SelectItem><SelectItem value="PREVIOUS_MONTH">Mês anterior</SelectItem></SelectContent></Select>
+          </div>
           {costs.length === 0 ? (
             <p
               className="text-center py-4"
@@ -715,6 +735,8 @@ export default function ExpensesPage() {
             >
               No income added yet
             </p>
+          ) : paginatedCosts.length === 0 ? (
+            <p className="py-8 text-center" style={{ color: "var(--muted-foreground)" }}>Nenhuma despesa encontrada para os filtros selecionados.</p>
           ) : (
             <ul className="space-y-3">
               {paginatedCosts.map((inc) => (
@@ -744,6 +766,7 @@ export default function ExpensesPage() {
                             .replace(/^./, (c) => c.toUpperCase())}
                         </p>
                       )}
+                      {inc.origin === "notification" && <p className="mt-1 text-xs font-semibold" style={{ color: inc.reviewed ? "var(--financial-trust)" : "var(--financial-investment)" }}>{inc.reviewed ? "CAPTURADA · REVISADA" : "CAPTURADA · PENDENTE"}</p>}
                     </div>
 
                     <div className="flex items-center gap-3">

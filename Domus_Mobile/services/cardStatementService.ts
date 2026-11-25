@@ -1,0 +1,44 @@
+import { supabase } from "@/lib/supabase";
+
+export interface CardStatementItem {
+  outgoingId: number;
+  description: string;
+  value: number;
+  transactionDate: string;
+}
+
+export interface ReconciledStatement {
+  statementId: number;
+  calculatedTotal: number;
+  bankTotal: number;
+  difference: number;
+  reconciliationStatus: "open" | "reconciled" | "needs_review";
+  reconciledAt: string | null;
+}
+
+type ItemRow = { outgoing_id: number; description: string; value: number | string; transaction_date: string };
+type StatementRow = { statement_id: number; calculated_total: number | string; bank_total: number | string; difference: number | string; reconciliation_status: ReconciledStatement["reconciliationStatus"]; reconciled_at: string | null };
+
+const mapItem = (row: ItemRow): CardStatementItem => ({ outgoingId: row.outgoing_id, description: row.description, value: Number(row.value), transactionDate: row.transaction_date });
+const mapStatement = (row: StatementRow): ReconciledStatement => ({ statementId: row.statement_id, calculatedTotal: Number(row.calculated_total), bankTotal: Number(row.bank_total), difference: Number(row.difference), reconciliationStatus: row.reconciliation_status, reconciledAt: row.reconciled_at });
+
+export const cardStatementService = {
+  async preview(creditCardId: number, statementMonth: string): Promise<CardStatementItem[]> {
+    const { data, error } = await supabase.rpc("domus_card_statement_items", { p_credit_card_id: creditCardId, p_statement_month: `${statementMonth}-01` });
+    if (error) throw error;
+    return ((data ?? []) as ItemRow[]).map(mapItem);
+  },
+
+  async reconcile(creditCardId: number, statementMonth: string, bankTotal: number, notes?: string): Promise<ReconciledStatement> {
+    const { data, error } = await supabase.rpc("domus_reconcile_card_statement", {
+      p_credit_card_id: creditCardId,
+      p_statement_month: `${statementMonth}-01`,
+      p_bank_total: bankTotal,
+      p_notes: notes?.trim() || null,
+    });
+    if (error) throw error;
+    const row = (data as StatementRow[] | null)?.[0];
+    if (!row) throw new Error("A conferência não retornou resultado.");
+    return mapStatement(row);
+  },
+};

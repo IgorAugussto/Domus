@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LineChart, PieChart } from "react-native-gifted-charts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SpendingGoalModal } from "@/components/SpendingGoalModal";
 import { costService, type Cost } from "@/services/costService";
 import { incomeService, type Income } from "@/services/incomeService";
@@ -25,6 +26,23 @@ const currency = (value: number) =>
 
 const PIE_PALETTE = ["#ef4444", "#f59e0b", "#3b82f6", "#10b981", "#94a3b8"];
 const INVESTMENT_PALETTE = ["#3b82f6", "#8b5cf6", "#06b6d4", "#f59e0b", "#10b981"];
+
+function errorDetails(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message, stack: error.stack };
+  }
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    return {
+      message: value.message,
+      code: value.code,
+      details: value.details,
+      hint: value.hint,
+      status: value.status,
+    };
+  }
+  return { value: String(error) };
+}
 
 export default function DashboardScreen() {
   const { width } = useWindowDimensions();
@@ -65,7 +83,7 @@ export default function DashboardScreen() {
       setKpiNetWorth(Number(data.netWorth));
       setKpiSavingsRate(Number(data.savingsRate));
     } catch (err) {
-      console.error("Erro ao carregar resumo mensal", err);
+      console.error("Erro ao carregar resumo mensal", errorDetails(err));
     }
   }, []);
 
@@ -96,7 +114,7 @@ export default function DashboardScreen() {
           setShowGoalLine(true);
         }
       } catch (err) {
-        console.error("Erro ao carregar dados do dashboard:", err);
+        console.error("Erro ao carregar dados do dashboard:", errorDetails(err));
       } finally {
         setLoading(false);
       }
@@ -174,7 +192,9 @@ export default function DashboardScreen() {
   }));
 
   const chartSource = activeTab === "ANUAL" ? yearlyData : monthlyData;
-  const xLabels = chartSource.map((d) => ("period" in d ? d.period : d.month));
+  const xLabels = activeTab === "ANUAL"
+    ? yearlyData.map((item) => item.period)
+    : monthlyData.map((item) => item.month);
 
   const incomeLine = chartSource.map((d, i) => ({ value: d.income, label: xLabels[i] }));
   const expensesLine = chartSource.map((d) => ({ value: d.expenses }));
@@ -182,15 +202,8 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900">
-      <ScrollView contentContainerClassName="p-4 gap-4">
-        <View className="flex-row items-center gap-2">
-          <View className="p-2 rounded-lg bg-financial-trustLight dark:bg-financial-trustLightDark">
-            <Ionicons name="pie-chart" size={22} color="#3b82f6" />
-          </View>
-          <Text className="text-2xl font-bold text-financial-trust dark:text-financial-trustDark">
-            Dashboard Financeiro
-          </Text>
-        </View>
+      <ScrollView contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Visão geral" subtitle="Acompanhe a saúde das suas finanças" icon="pie-chart" />
 
         <View className="flex-row flex-wrap gap-3">
           <KpiCard
