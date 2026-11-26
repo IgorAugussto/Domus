@@ -1,0 +1,73 @@
+# Domus v2.1 — plano incremental do Motor de Inteligência Financeira
+
+**Planejamento e auditoria estática · 25/11/2026.** Complementa `Domus_v2.1.md` e `Domus_Motor_Inteligencia_Financeira.md`. Não autoriza implementação, migração ou alteração remota. O código é a evidência do comportamento pretendido/implementado; a auditoria não verificou dados reais, schema remoto integral nem comportamento em dispositivo.
+
+## Situação atual e dependências
+
+- O handoff registra fases 0–4 da transição Supabase realizadas, filtros nas três variantes e uso real em andamento. Não confundir entrega com validação completa: aceitar aperfeiçoamentos conforme o uso. A AWS antiga está desligada; importação de extratos continua no backlog. A limpeza financeira aprovada foi aplicada uma única vez e não deve ser repetida.
+- O repositório contém Auth e RLS, receitas, despesas, investimentos, cartões, eventos de notificação, status mensal e conferência de faturas. `domus_monthly_payments`, `domus_year_projection`, `domus_monthly_summary` e `domus_current_month_projection` fornecem cálculos atuais. A função de itens de fatura foi corrigida pela migração `20261125120000`; teste remoto anterior confirmou fatura vazia para o cartão informado, não o conjunto de casos de parcelas.
+- `outgoing.value` é usado como valor de cada ocorrência mensal pelas RPCs; não é dividido pela duração. O cadastro guarda o valor informado e `duration_in_months`; é necessário confirmar com o usuário a interpretação pretendida e como tratar registros existentes. O campo `frequency` existe, mas as RPCs de pagamentos e projeção anual percorrem meses sem aplicá-lo; a interface desktop oferece outras frequências. Não prometer suporte correto a todas antes de exemplos de referência.
+- `purchase_at`, origem e revisão existem; `payment_status` registra uma marca por despesa e mês, não comprova data, conta ou valor efetivamente liquidado. Receitas possuem datas e recorrência, mas não há comprovante de recebimento no contrato inspecionado. Ambos os clientes definem um ano de término para receita mensal criada: confirmar se essa limitação corresponde à intenção antes de projetar além dela.
+- Investimentos têm valor, prazo e retorno esperado; a projeção anual usa `expected_return / 100 / 12` como taxa mensal e capitaliza por meses. Isso pressupõe taxa anual nominal convertida por divisão, não taxa efetiva anual: esclarecer unidade, juros, aporte, liquidez e se valor é saldo ou principal. Não considerar esse valor automaticamente como reserva ou dinheiro disponível.
+- A prévia de cartão gera uma linha por mês de duração, mas, quando `purchase_at` existe, usa a mesma data de compra em todas elas. Para duração superior a um mês isso pode concentrar parcelas no ciclo original; é um risco identificado por leitura, a confirmar com testes antes de corrigir. O ciclo atual usa mês de fechamento, dia limitado ao fim do mês e data anterior exclusiva. Falta estabelecer primeira parcela e mês de vencimento da fatura; não usar a prévia atual como calendário completo de caixa sem revisão.
+- `domus_year_projection` soma a despesa em cada mês ativo; `domus_current_month_projection` soma valores em cada dia do intervalo ativo. `domus_monthly_summary` calcula acumulado desde janeiro, retorna esse acumulado como patrimônio e deriva renda/taxa dele: isso não comprova patrimônio líquido nem recebimento do mês. Verificar consumidores e corrigir com casos de referência antes de reutilizar os nomes/indicadores no motor. A análise não afirma que todos os gráficos somam os pontos diários.
+- Não foram encontradas, nas migrações e serviços inspecionados, entidades próprias para contas, movimentações, recebimentos, metas, intenções, preferências ou limite atualizado. Ausência nessa inspeção não comprova ausência no schema legado remoto. Não inferir saldo a partir de receitas e despesas cadastradas sem saldo inicial e liquidações.
+
+## Modelo de dados proposto — sujeito a desenho e aprovação
+
+A ordem e os nomes são candidatos; não criar tabelas apenas por corresponderem a esta lista. Preservar registros existentes, esquema legado, histórico Flyway, RLS e contratos dos clientes.
+
+1. **Contas e caixa:** conta por proprietário, moeda/tipo e saldo de abertura com data. Movimentações com valor, data efetiva, tipo e vínculo de origem; ajustes auditáveis. Uma transferência deve gerar duas pernas correlacionadas, propriedade validada e operação atômica/idempotente. Definir política para edição/estorno, saldo confirmado e conciliação manual.
+2. **Liquidações:** recebimentos vinculados a receita e competência, com data, valor e conta; pagamentos vinculados a obrigação ou fatura, com data/valor/conta. Permitir pagamento parcial/atrasado e múltiplos movimentos quando decidido. Planejar mapeamento do booleano legado sem fabricar datas ou saldos. Tratar consumo do cartão por competência e liquidação de fatura como saída de caixa uma única vez.
+3. **Investimentos e reserva:** definir instrumentos, valores e datas, liquidez e elegibilidade para reserva; aportes/resgates vinculados às movimentações, sem duplicar receita ou consumo. Evitar calcular patrimônio líquido completo enquanto ativos ou passivos estiverem desconhecidos.
+4. **Preferências e metas:** margem (valor ou percentual), horizonte, reserva-alvo, aporte desejado e recursos alocados; meta com prazo, prioridade e caráter obrigatório/flexível. A alocação não pode reservar os mesmos recursos duas vezes. Tratar preferências ausentes como desconhecidas.
+5. **Cartão:** limite disponível informado, data de referência e regras verificadas com usuário; vencimento, parcelas e encargos conhecidos. Um limite antigo é dado incerto, não garantia de disponibilidade.
+6. **Intenções:** descrição, preço e condições informadas, data, prioridade, prazo, estado e vínculos próprios; não criar lançamento ao simular. Persistir apenas quando o fluxo de intenções for aprovado.
+7. **Snapshot:** contrato autenticado versionado e consistente na mesma transação/leitura, com data de referência, eventos canônicos, datas de atualização, origem, lacunas e estimativas. Paginar/limitar horizonte e volume; se múltiplas chamadas, definir versão comum para evitar misturar estados. SQL/RPC produz eventos reais e compromissos canônicos; TypeScript aplica cenários hipotéticos. Cada nova migração terá RLS, grants mínimos, ownership de todos os vínculos, constraints e testes de duas contas e anônimo.
+
+## Biblioteca TypeScript compartilhada
+
+É viável: Android e Electron usam TypeScript 5.9 e Supabase JS, mas têm projetos, dependências e lockfiles independentes. Propor pacote local `packages/financial-engine` de funções puras, sem React, Node, DOM, rede ou relógio implícito. Validar resolução do Metro/Expo, TypeScript, Vite e empacotamento Electron em ambos os projetos antes de adotá-lo; escolher dependência local ou workspace somente após protótipo técnico aprovado. Não assumir que copiar um import ou criar symlink resolve Metro, instalação e CI. Web pode consumir depois, se compatível, sem bloquear Android/Ubuntu.
+
+Para transporte exato, definir contrato de decimais como strings ou centavos com limites verificados de inteiro seguro; `numeric` vindo em JSON como número já pode perder precisão antes de `Number()`. Os serviços atuais convertem para `Number`, portanto a fronteira de precisão exige contrato novo de ponta a ponta. Para juros, avaliar decimal.js ou equivalente e configuração de precisão/arredondamento; não introduzir dependência por antecipação. Zod, Vitest e pgTAP são candidatos, não pré-requisitos fechados. Exercitar o mesmo conjunto de casos fictícios no pacote e nos dois bundlers.
+
+## Revisão das fórmulas e recomendações
+
+- Comprometimento = despesas previstas / receita prevista; sobra = receitas previstas − despesas previstas. Definir se inclui consumo do cartão ou vencimento de fatura conforme o indicador e nunca ambos. Denominador zero/desconhecido: indisponível. Despesas essenciais e despesas variáveis devem ter classificação explícita; média de três meses completos deve excluir duplicidades e eventos extraordinários identificados, e mostrar amostra insuficiente.
+- Caixa por data = saldo inicial confirmado + entradas liquidadas/previstas − saídas liquidadas/previstas. Exibir menor saldo intramês, ordem de eventos no mesmo dia e hipótese de data; ao atravessar o dia de referência, não contar movimentos já incluídos no saldo inicial. Aportes saem do caixa uma vez e sua destinação patrimonial não é consumo. Sobra mensal positiva não garante caixa positivo.
+- Reserva em meses = reserva líquida elegível / média mensal das despesas essenciais; alvo = despesa essencial mensal × meses desejados. Falta de denominação, liquidez, base de custo ou confirmação produz resultado indisponível. Definir se reserva é protegida ou utilizável e evitar contagem dupla com metas. Patrimônio líquido = ativos conhecidos − passivos conhecidos, com aviso de incompletude; não chamar fluxo acumulado de patrimônio.
+- `H = R − D − P − M` só é válido se D excluir P e M não for despesa; documentar sinais, unidades e o momento de cada evento. Renda variável e inflação/retornos são hipóteses, não fatos. Cenário de estresse não é probabilidade.
+- Parcelas sem juros: dividir centavos e distribuir o resíduo deterministicamente, soma igual ao total. Fórmula Price apenas para condições compatíveis, taxa periódica e i > 0; i = 0 usa divisão, e juros, entrada, tarifas, arredondamento por parcela e última parcela seguem oferta real. Comparar preço total, não somente prestação. Fechamento, vencimento, dia não útil e regras do emissor exigem hipóteses explícitas.
+- O exemplo de R$ 4.800 confere: dezembro em 6x tem pior sobra −R$ 200; 12x, R$ 200; março em 6x, R$ 750; 12x, R$ 1.150, dadas as sobras e primeira parcela declaradas. O exemplo não demonstra caixa, limite, prazo ou reserva e não produz recomendação segura sozinho.
+- Ordem proposta: dados críticos ausentes → inconclusivo, salvo uma restrição comprovadamente violada que permita indicar inviabilidade mesmo com lacunas; depois restrições, atenção e compatibilidade. Definir precedência para múltiplos motivos, metas obrigatórias e horizonte completo. Comparar violações preexistentes com impacto incremental. Não classificar financiamento como viável só por score.
+- Pesos 30/25/20/15/10 e normalizações são hipóteses, não critérios aprovados. O score de orçamento satura ao atingir a margem e pode empatar cenários com folgas muito diferentes; o de custo não captura valor do dinheiro no tempo; reserva e aportes podem duplicar objetivos; espera/tolerância não mede prioridade. Critério desconhecido não é não aplicável. Definir métricas com unidades e intervalos temporais, redistribuição e desempate; testar sensibilidade, dominância, consistência e cenários sem compra. Adiar pontuação e qualquer ranking até exemplos e pesos aprovados. A alternativa não comprar pode ser apresentada separadamente sem preço zero na razão de custos.
+
+## Fases pequenas e verificáveis
+
+Cada fase é proposta para aprovação separada, preserva Android/Ubuntu e deve incluir critérios, dados fictícios, testes proporcionais e limitações. Alterações remotas exigem autorização específica; nenhuma fase depende de servidor novo ou serviço pago.
+
+| Fase | Entrega proposta | Pré-requisito e aceite |
+|---|---|---|
+| A | Contratos e exemplos de referência | Definir valor/parcela, frequência, caixa, datas, taxa e lacunas; fechar casos mensais, compra, fatura e liquidação. Sem banco. |
+| B | Consistência do núcleo existente | Após aprovação, testar e corrigir divergências comprovadas em recorrência, projeções e cartão; revisar impacto nos três consumidores e preservar dados. Base antes de recomendar. |
+| C | Contas e saldo de abertura | Modelo e migrações versionadas, RLS e telas mínimas; conciliação manual, sem criar histórico. Duas contas e acesso anônimo testados. |
+| D | Recebimentos e pagamentos efetivos | Vincular liquidações a contas, transferências e faturas sem duplicidade; manter estados antigos interpretáveis. Saldo e datas conferem com exemplos. |
+| E | Snapshot e biblioteca comum | Contrato versionado, precisão exata, dados faltantes e eventos canônicos; mesmos resultados e empacotamento Android/Ubuntu. |
+| F | Diagnóstico e projeção | Indicadores independentes, caixa por data, incerteza e cenário de estresse; sem score, sem presumir histórico zero. |
+| G | Política, reserva e metas | Preferências opcionais, liquidez e alocação sem dupla contagem; projeções respeitam premissas e restrições. |
+| H | Simulador de compra | À vista/parcelado, ciclos, limite informado, custo total e alternativas; sem gravar compra e sem score. Testar horizonte integral e restrições. |
+| I | Classificação e explicações | Estados, motivos e comparação com cenário base; validar pesos/normalização e sensibilidade antes de qualquer ranking. |
+| J | Intenções e evolução | Salvar/recalcular intenções isoladas ou em conjunto; alertas no app. Estratégias personalizadas continuam no backlog. |
+
+A ordem pode ser ajustada após a fase A: contas e liquidações são dependências para afirmar disponibilidade de caixa; um diagnóstico limitado pode ser antecipado apenas se rotulado com dados ausentes. Os testes de aceitação devem cobrir meses curtos/bissexto, início/fim, recorrências, duplicidade, saldo de abertura, parcelamento, fatura e duas identidades, além de cenários sem dados suficientes. Testes reais no Android e no Electron acompanham as respectivas telas.
+
+## Decisões a obter antes das fases afetadas
+
+- Valor cadastrado de despesa parcelada representa cada parcela ou total? Como devem funcionar semanal, quinzenal, trimestral e anual? Como interpretar registros já criados?
+- Saldo inicial é por conta e em qual data? Quais pagamentos e recebimentos o usuário deseja registrar, inclusive parciais e atrasados?
+- A taxa de investimento é nominal ou efetiva, qual periodicidade, e quais aplicações são líquidas e elegíveis à reserva?
+- Qual regra de primeira parcela, vencimento, dias não úteis e comprometimento de limite por cartão? Como distinguir valores desconhecidos?
+- Qual margem, despesas essenciais, metas obrigatórias e reservas protegidas? Essas escolhas são opcionais e editáveis, não parâmetros universais.
+- Qual limite de horizonte e tamanho de snapshot é aceitável? Como sinalizar dados desatualizados? Qual conjunto de exemplos e pesos é adequado antes de pontuar?
+
+Backlog explícito: estratégias personalizadas de recomendação, importador, IA generativa, integração bancária e alertas externos. Custos de Supabase e distribuição seguem sujeitos a limites reais do plano; não assumir gratuidade permanente.

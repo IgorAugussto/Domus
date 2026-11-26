@@ -12,24 +12,26 @@ export function FeedbackToast({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <div
+        role={type === "error" ? "alert" : "status"}
         className="pointer-events-auto px-5 py-4 rounded-xl shadow-xl flex items-center gap-4 min-w-[280px]"
         style={{
           background:
             type === "success"
-              ? "var(--financial-income-light)"
-              : "var(--destructive-light, #FEF2F2)",
+              ? "#ecfdf5"
+              : "#fef2f2",
 
           color:
             type === "success"
-              ? "var(--financial-income)"
-              : "var(--destructive, #991B1B)",
+              ? "#065f46"
+              : "#991b1b",
         }}
       >
         <span className="text-sm font-medium text-center">{message}</span>
 
         <button
+          aria-label="Fechar aviso"
           onClick={onClose}
-          className="ml-auto text-sm opacity-60 hover:opacity-100"
+          className="ml-auto text-sm"
         >
           ✕
         </button>

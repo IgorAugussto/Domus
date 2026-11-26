@@ -154,3 +154,11 @@ Fontes: três CSVs Supabase Snippet Processo_Migracao, exportados pelo usuário 
 Primeiro confirmar se Java/AWS ainda está ativo e qual papel utiliza. Se nenhum consumidor precisar da Data API, considerar desabilitá-la temporariamente pelo painel como contenção; verificar configuração e dependências. Proteger o acesso público prontamente e documentar a alteração. Backup seguro e validação de restauração antes de migrações estruturais. Depois preparar migrações no Codex, configurar Auth pelo painel, criar conta pessoal e vincular dados na ordem prescrita pelo script revisado; testar e liberar a Data API somente com grants/RLS verificados. Restringir cadastro público se o uso permanecer pessoal. Desativar infraestrutura antiga somente após testes e corte validado.
 
 Nenhuma mudança no Supabase foi executada nesta revisão. Estado do Java, papel de conexão, backup, configuração efetiva da Data API, grants completos e conteúdo real das tabelas ainda não foram verificados. A escolha de mecanismo de migração, vínculo UUID e nomes das novas tabelas são propostas técnicas a validar no repositório; custo zero continua meta, não garantia.
+
+## 16. Atualização do planejamento — Motor de Inteligência Financeira
+
+O Motor de Inteligência Financeira complementa esta arquitetura e mantém Supabase, Android e Electron/Ubuntu como base, sem novos servidores ou serviços pagos. A especificação está em `Domus_Motor_Inteligencia_Financeira.md`; o diagnóstico do repositório, as dependências, os riscos e as fases incrementais A–J estão em `Domus_Plano_Motor_Inteligencia.md`.
+
+O handoff de 25/11/2026 informa que as fases 0–4, incluindo filtros e conferência de faturas, foram entregues e seguem em validação pelo uso. A AWS antiga foi desligada; o importador permanece no backlog. A limpeza financeira já autorizada e aplicada não deve ser repetida. As seções históricas anteriores descrevem propostas e evidências da época, não necessariamente o estado atual.
+
+Antes do motor de decisão, confirmar a semântica dos lançamentos e corrigir divergências verificadas no núcleo financeiro; contas, saldos e liquidações são necessários para projeções confiáveis de caixa. As estratégias personalizadas de recomendação permanecem no backlog. Nenhuma etapa deste planejamento autoriza implementação ou alteração no banco sem aprovação posterior.
