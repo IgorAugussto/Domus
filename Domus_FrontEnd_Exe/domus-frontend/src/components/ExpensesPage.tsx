@@ -30,6 +30,8 @@ import { expenseCategoryLabels } from "../utils/labels/expenseCategoryLabels";
 import { frequencyLabels } from "../utils/labels/frequencyLabels";
 import { expenseDescriptionLabel } from "../utils/labels/expenseDescriptionLabel";
 
+const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 const formatDateToISO = (date: string) => {
   if (!date) return "";
   return date;
@@ -521,7 +523,7 @@ export default function ExpensesPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Valor</Label>
+                <Label htmlFor="amount">{frequency === "Monthly" ? "Valor por mês" : "Valor"}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -603,6 +605,12 @@ export default function ExpensesPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {frequency === "Monthly" && amount && duration && duration > 1 ? (
+                <p className="text-sm" style={{ color: "var(--card-foreground)" }}>
+                  Total previsto: <strong>{formatCurrency(Number(amount) * duration)}</strong> · {duration} × {formatCurrency(Number(amount))} por mês
+                </p>
+              ) : null}
 
               {/* TIPO DE PAGAMENTO */}
               <div className="space-y-2">
@@ -771,12 +779,17 @@ export default function ExpensesPage() {
                             .replace(/^./, (c) => c.toUpperCase())}
                         </p>
                       )}
+                      {inc.frequency === "Monthly" && inc.durationInMonths > 1 && (
+                        <p className="mt-1 text-sm" style={{ color: "var(--card-foreground)" }}>
+                          Total previsto: <strong>{formatCurrency(inc.value * inc.durationInMonths)}</strong> · {inc.durationInMonths} × {formatCurrency(inc.value)} por mês
+                        </p>
+                      )}
                       {inc.origin === "notification" && <p className="mt-1 text-xs font-semibold" style={{ color: inc.reviewed ? "var(--financial-trust)" : "var(--financial-investment)" }}>{inc.reviewed ? "CAPTURADA · REVISADA" : "CAPTURADA · PENDENTE"}</p>}
                     </div>
 
                     <div className="flex items-center gap-3">
                       <strong style={{ color: "var(--financial-danger)" }}>
-                        ${inc.value}
+                        {formatCurrency(inc.value)}
                       </strong>
 
                       <button

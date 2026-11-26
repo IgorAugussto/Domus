@@ -20,6 +20,8 @@ import { expenseCategoryLabels } from "@/utils/labels/expenseCategoryLabels";
 import { expenseDescriptionLabel } from "@/utils/labels/expenseDescriptionLabel";
 import { frequencyLabels } from "@/utils/labels/frequencyLabels";
 
+const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 const CATEGORY_OPTIONS = [
   { label: "Alimentação", value: "Food & Dining" },
   { label: "Transporte", value: "Transportation" },
@@ -372,7 +374,7 @@ export default function ExpensesScreen() {
           </CardHeader>
           <CardContent className="gap-4">
             <View>
-              <Label>Valor</Label>
+              <Label>{frequency === "Monthly" ? "Valor por mês" : "Valor"}</Label>
               <Input keyboardType="decimal-pad" placeholder="0.00" value={amount} onChangeText={setAmount} />
             </View>
 
@@ -398,6 +400,10 @@ export default function ExpensesScreen() {
                 placeholder="Selecionar frequência"
               />
             </View>
+
+            {frequency === "Monthly" && amount && Number(duration) > 1 ? (
+              <Text className="text-cardForeground dark:text-cardForegroundDark">Total previsto: {formatCurrency(Number(amount) * Number(duration))} · {duration} × {formatCurrency(Number(amount))} por mês</Text>
+            ) : null}
 
             <View>
               <Label>Tipo de Pagamento</Label>
@@ -480,6 +486,9 @@ export default function ExpensesScreen() {
                           {dayjs(item.purchaseAt ?? item.startDate).format("DD [de] MMMM [de] YYYY")}
                         </Text>
                       )}
+                      {item.frequency === "Monthly" && item.durationInMonths > 1 && (
+                        <Text className="mt-1 text-sm text-cardForeground dark:text-cardForegroundDark">Total previsto: {formatCurrency(item.value * item.durationInMonths)} · {item.durationInMonths} × {formatCurrency(item.value)} por mês</Text>
+                      )}
                       {item.origin === "notification" && (
                         <Text className={`mt-1 self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.reviewed ? "bg-financial-trustLight text-financial-trust dark:bg-financial-trustLightDark dark:text-financial-trustDark" : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"}`}>{item.reviewed ? "CAPTURADA · REVISADA" : "CAPTURADA · PENDENTE"}</Text>
                       )}
@@ -487,7 +496,7 @@ export default function ExpensesScreen() {
 
                     <View className="flex-row items-center gap-4">
                       <Text className="font-bold text-financial-danger dark:text-financial-dangerDark">
-                        R$ {item.value}
+                        {formatCurrency(item.value)}
                       </Text>
 
                       <Pressable
