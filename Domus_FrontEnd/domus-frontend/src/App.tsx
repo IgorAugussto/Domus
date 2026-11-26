@@ -11,6 +11,7 @@ import PrivateLayout from "./layouts/PrivateLayout";
 import { Payments } from "./components/Payments";
 import { NotificationReviewPage } from "./components/NotificationReviewPage";
 import { CardStatementsPage } from "./components/CardStatementsPage";
+import { CreditCardsPage } from "./components/CreditCardsPage";
 
 
 
@@ -30,7 +31,8 @@ export default function App() {
           <Route path="/investments" element={<InvestmentsPage />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/review" element={<NotificationReviewPage />} />
-          <Route path="/cards" element={<CardStatementsPage />} />
+          <Route path="/cards" element={<CreditCardsPage />} />
+          <Route path="/statements" element={<CardStatementsPage />} />
         </Route>
       </Routes>
     </AuthProvider>

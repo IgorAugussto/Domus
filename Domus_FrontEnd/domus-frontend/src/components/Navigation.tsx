@@ -4,7 +4,7 @@ import { DollarSign, TrendingUp, LogOut, Wallet, BarChart3, Sun, Moon, CreditCar
 import { useTheme } from '../hooks/useTheme';
 import { useLocation } from "react-router-dom";
 
-type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards' | 'review';
+type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards' | 'statements' | 'review';
 
 interface NavigationProps {
   onPageChange: (page: Page) => void;
@@ -85,6 +85,9 @@ export default function Navigation({ onPageChange, onLogout }: NavigationProps) 
             </Button>
             <Button variant={currentPage === 'cards' ? 'navActivePayments' : 'navButton'} onClick={() => onPageChange('cards')} className="flex items-center gap-2 transition-all">
               <IdCard className="h-4 w-4" /> Cartões
+            </Button>
+            <Button variant={currentPage === 'statements' ? 'navActivePayments' : 'navButton'} onClick={() => onPageChange('statements')} className="flex items-center gap-2 transition-all">
+              <CreditCard className="h-4 w-4" /> Faturas
             </Button>
             <Button
               variant={currentPage === 'review' ? 'navActivePayments' : 'navButton'}

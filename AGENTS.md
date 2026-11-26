@@ -23,6 +23,7 @@ Cada área possui um `AGENTS.md` mais específico. Ao atuar nela, leia o arquivo
 ## Regras que valem para todo o projeto
 
 - Preserve a separação entre frontend, backend Java, serviço Python e mobile. Não copie uma correção para outra variante sem verificar diferenças reais.
+- Garanta paridade funcional entre web, desktop e mobile: as três versões devem permitir acessar e editar os mesmos dados e recursos financeiros, respeitando diferenças nativas inevitáveis. Revise e valide todas as variantes ao entregar funcionalidades ou corrigir contratos; registre diferenças temporárias explicitamente.
 - Trate a API como contrato compartilhado. Ao mudar endpoint, autenticação, payload, enum, data ou status HTTP, procure e atualize todos os consumidores web, desktop e mobile.
 - Não leia, exponha, commite ou substitua segredos de `.env`, chaves JWT, credenciais de banco, keystore, AWS, Docker Hub ou RabbitMQ. Use variáveis de ambiente e exemplos redigidos.
 - Não faça migrações destrutivas nem altere dados de produção. O schema é gerenciado por Flyway; Hibernate deve apenas validar em ambientes normais.
