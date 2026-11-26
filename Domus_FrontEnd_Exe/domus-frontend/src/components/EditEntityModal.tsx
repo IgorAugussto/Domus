@@ -146,8 +146,8 @@ export function EditEntityModal({
             <div className="space-y-2">
               <Label>Cartão</Label>
               <Select value={selectedCard} onValueChange={(value) => { setSelectedCard(value); setCardError(false); }}>
-                <SelectTrigger><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
-                <SelectContent>{creditCards.map((card) => <SelectItem key={card.id} value={String(card.id)}>{card.nickname || card.brand} •••• {card.lastFourDigits}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="select-trigger"><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
+                <SelectContent className="select-content">{creditCards.map((card) => <SelectItem key={card.id} className="select-item" style={{ color: "var(--card-foreground)" }} value={String(card.id)}>{card.nickname || card.brand} •••• {card.lastFourDigits}</SelectItem>)}</SelectContent>
               </Select>
               {cardError && <p role="alert">Selecione o cartão da compra.</p>}
               {!creditCards.length && <p>Cadastre um cartão na aba Cartões.</p>}

@@ -569,8 +569,8 @@ export default function ExpensesPage() {
                 <div className="space-y-2">
                   <Label htmlFor="creditCard">Cartão</Label>
                   {creditCards.length ? <Select value={creditCardId} onValueChange={setCreditCardId}>
-                    <SelectTrigger id="creditCard"><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
-                    <SelectContent>{creditCards.map((card) => <SelectItem key={card.id} value={String(card.id)}>{card.nickname || card.brand} •••• {card.lastFourDigits}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="select-trigger" id="creditCard"><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
+                    <SelectContent className="select-content">{creditCards.map((card) => <SelectItem key={card.id} className="select-item" style={{ color: "var(--card-foreground)" }} value={String(card.id)}>{card.nickname || card.brand} •••• {card.lastFourDigits}</SelectItem>)}</SelectContent>
                   </Select> : <p>Cadastre um cartão na aba Cartões antes de continuar.</p>}
                 </div>
               )}
