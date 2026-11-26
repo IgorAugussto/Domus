@@ -64,7 +64,7 @@ export function DashboardPage() {
   const [kpiExpenses, setKpiExpenses] = useState(0);
   const [kpiInvestments, setKpiInvestments] = useState(0);
   const [kpiNetWorth, setKpiNetWorth] = useState(0);
-  const [kpiSavingsRate, setKpiSavingsRate] = useState<number>(0);
+  const [kpiSavingsRate, setKpiSavingsRate] = useState<number | null>(null);
 
   // Estados para a meta de gastos
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -85,7 +85,7 @@ export function DashboardPage() {
       setKpiExpenses(Number(data.expenses));
       setKpiInvestments(Number(data.investments));
       setKpiNetWorth(Number(data.netWorth));
-      setKpiSavingsRate(Number(data.savingsRate));
+      setKpiSavingsRate(data.savingsRate);
     } catch (err) {
       console.error("Erro ao carregar resumo mensal", err);
     }
@@ -152,7 +152,7 @@ export function DashboardPage() {
         setKpiExpenses(Number(data.expenses));
         setKpiInvestments(Number(data.investments));
         setKpiNetWorth(Number(data.netWorth));
-        setKpiSavingsRate(Number(data.savingsRate));
+        setKpiSavingsRate(data.savingsRate);
       } catch (error) {
         console.error("Erro ao carregar resumo mensal:", error);
       }
@@ -452,7 +452,7 @@ export function DashboardPage() {
               className="text-sm"
               style={{ color: "var(--financial-trust)" }}
             >
-              Patrimônio Líquido
+              Resultado previsto acumulado no ano
             </CardTitle>
             <Target
               className="h-4 w-4"
@@ -473,7 +473,7 @@ export function DashboardPage() {
               className="text-xs mt-1"
               style={{ color: "var(--financial-trust)" }}
             >
-              Quanto Você Economizou: {kpiSavingsRate}%
+              Sobra prevista no mês: {kpiSavingsRate === null ? "Indisponível" : `${kpiSavingsRate.toFixed(1)}%`}
             </p>
           </CardContent>
         </Card>

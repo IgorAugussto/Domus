@@ -63,7 +63,7 @@ export default function DashboardScreen() {
   const [kpiExpenses, setKpiExpenses] = useState(0);
   const [kpiInvestments, setKpiInvestments] = useState(0);
   const [kpiNetWorth, setKpiNetWorth] = useState(0);
-  const [kpiSavingsRate, setKpiSavingsRate] = useState(0);
+  const [kpiSavingsRate, setKpiSavingsRate] = useState<number | null>(null);
 
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [spendingGoal, setSpendingGoal] = useState(0);
@@ -81,7 +81,7 @@ export default function DashboardScreen() {
       setKpiExpenses(Number(data.expenses));
       setKpiInvestments(Number(data.investments));
       setKpiNetWorth(Number(data.netWorth));
-      setKpiSavingsRate(Number(data.savingsRate));
+      setKpiSavingsRate(data.savingsRate);
     } catch (err) {
       console.error("Erro ao carregar resumo mensal", errorDetails(err));
     }
@@ -231,12 +231,12 @@ export default function DashboardScreen() {
             hint={`+${expectedReturnAverage.toFixed(2)}% retorno esperado`}
           />
           <KpiCard
-            label="Patrimônio Líquido"
+            label="Resultado previsto acumulado no ano"
             value={currency(kpiNetWorth)}
             icon="trophy"
             colorClass="text-financial-trust dark:text-financial-trustDark"
             bgClass="bg-financial-trustLight dark:bg-financial-trustLightDark"
-            hint={`Economizou: ${kpiSavingsRate}%`}
+            hint={`Sobra prevista no mês: ${kpiSavingsRate === null ? "Indisponível" : `${kpiSavingsRate.toFixed(1)}%`}`}
           />
         </View>
 
