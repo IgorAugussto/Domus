@@ -3,4 +3,5 @@ export const frequencyLabels: Record<string, string> = {
   Monthly: "Mensal",
   Weekly: "Semanal",
   Yearly: "Anual",
+  Annually: "Anual",
 };

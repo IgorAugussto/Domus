@@ -26,6 +26,7 @@ import { creditCardService, type CreditCard } from "../service/creditCardService
 import { EditEntityModal } from "./EditEntityModal";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { FeedbackToast } from "./FeedbackToast";
+import { formatInstallmentParts, splitInstallmentTotal } from "../utils/installments";
 import { expenseCategoryLabels } from "../utils/labels/expenseCategoryLabels";
 import { frequencyLabels } from "../utils/labels/frequencyLabels";
 import { expenseDescriptionLabel } from "../utils/labels/expenseDescriptionLabel";
@@ -45,6 +46,7 @@ function cardLabel(card: CreditCard): string {
 export default function ExpensesPage() {
   const navigate = useNavigate();
   const [amount, setAmount] = useState("");
+  const [amountMode, setAmountMode] = useState<"installment" | "total">("installment");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -187,14 +189,25 @@ export default function ExpensesPage() {
       return;
     }
 
+    const installments = frequency === "Monthly" && amountMode === "total" && (duration ?? 0) > 1
+      ? splitInstallmentTotal(amount, duration as number) : null;
+    if (frequency === "Monthly" && amountMode === "total" && (duration ?? 0) > 1 && !installments) {
+      setToast({ message: "Informe um total válido com até duas casas decimais e ao menos um centavo por parcela.", type: "error" });
+      return;
+    }
+    if (frequency !== "One-time" && (!Number.isSafeInteger(duration) || (duration ?? 0) < 1)) {
+      setToast({ message: "Informe uma duração inteira e positiva.", type: "error" });
+      return;
+    }
     try {
       await costService.create({
         description: description || `${category}`,
-        amount: Number(amount),
+        amount: installments?.first ?? Number(amount),
+        installmentTotal: installments?.total ?? null,
         startDate: formatDateToISO(date),
         category,
         frequency,
-        durationInMonths: frequency === "One-time" ? 1 : (duration as number),
+        durationInMonths: frequency === "One-time" ? 1 : frequency === "Yearly" ? (duration as number) * 12 : (duration as number),
         paymentType: paymentType as PaymentType,
         paid: false,
         creditCardId: creditCardId ? Number(creditCardId) : undefined,
@@ -205,6 +218,7 @@ export default function ExpensesPage() {
       setToast({ message: "Despesa salva com sucesso", type: "success" });
 
       setAmount("");
+      setAmountMode("installment");
       setCategory("");
       setDescription("");
       setPaymentType("");
@@ -523,7 +537,7 @@ export default function ExpensesPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">{frequency === "Monthly" ? "Valor por mês" : "Valor"}</Label>
+                <Label htmlFor="amount">{frequency === "Monthly" ? (amountMode === "total" ? "Valor total da compra" : "Valor por mês") : "Valor"}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -602,15 +616,30 @@ export default function ExpensesPage() {
                     <SelectItem className="select-item" value="Monthly">
                       Mensal
                     </SelectItem>
+                    <SelectItem className="select-item" value="Yearly">
+                      Anual
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {frequency === "Monthly" && amount && duration && duration > 1 ? (
+              {frequency === "Monthly" && (
+                <div className="space-y-2">
+                  <Label>O valor informado é</Label>
+                  <Select value={amountMode} onValueChange={(value) => setAmountMode(value as "installment" | "total")}>
+                    <SelectTrigger className="select-trigger"><SelectValue /></SelectTrigger>
+                    <SelectContent className="select-content"><SelectItem className="select-item" value="installment">Valor de cada parcela</SelectItem><SelectItem className="select-item" value="total">Valor total da compra</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              )}
+              {frequency === "Monthly" && amount && duration && duration > 1 && (
                 <p className="text-sm" style={{ color: "var(--card-foreground)" }}>
-                  Total previsto: <strong>{formatCurrency(Number(amount) * duration)}</strong> · {duration} × {formatCurrency(Number(amount))} por mês
+                  {amountMode === "total" ? (() => {
+                    const split = splitInstallmentTotal(amount, duration);
+                    return split ? <>Total: <strong>{formatCurrency(split.total)}</strong> · {formatInstallmentParts(split.total, duration)}</> : "Informe um total válido para calcular as parcelas.";
+                  })() : <>Total previsto: <strong>{formatCurrency(Number(amount) * duration)}</strong> · {duration} × {formatCurrency(Number(amount))} por mês</>}
                 </p>
-              ) : null}
+              )}
 
               {/* TIPO DE PAGAMENTO */}
               <div className="space-y-2">
@@ -677,7 +706,7 @@ export default function ExpensesPage() {
                     {frequency === "Bi-weekly" && "Number of bi-weekly periods"}
                     {frequency === "Monthly" && "Número de parcelas"}
                     {frequency === "Quarterly" && "Number of quarters"}
-                    {frequency === "Annually" && "Number of years"}
+                    {frequency === "Yearly" && "Número de anos"}
                   </Label>
                   <Input
                     id="duration"
@@ -781,7 +810,7 @@ export default function ExpensesPage() {
                       )}
                       {inc.frequency === "Monthly" && inc.durationInMonths > 1 && (
                         <p className="mt-1 text-sm" style={{ color: "var(--card-foreground)" }}>
-                          Total previsto: <strong>{formatCurrency(inc.value * inc.durationInMonths)}</strong> · {inc.durationInMonths} × {formatCurrency(inc.value)} por mês
+                          Total previsto: <strong>{formatCurrency(inc.installmentTotal ?? inc.value * inc.durationInMonths)}</strong> · {inc.installmentTotal != null ? formatInstallmentParts(inc.installmentTotal, inc.durationInMonths) : `${inc.durationInMonths} × ${formatCurrency(inc.value)} por mês`}
                         </p>
                       )}
                       {inc.origin === "notification" && <p className="mt-1 text-xs font-semibold" style={{ color: inc.reviewed ? "var(--financial-trust)" : "var(--financial-investment)" }}>{inc.reviewed ? "CAPTURADA · REVISADA" : "CAPTURADA · PENDENTE"}</p>}

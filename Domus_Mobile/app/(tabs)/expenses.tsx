@@ -16,6 +16,7 @@ import { FeedbackToast } from "@/components/FeedbackToast";
 import { costService, type Cost, type PaymentType } from "@/services/costService";
 import { creditCardService, type CreditCard } from "@/services/creditCardService";
 import { statementService, type PickedStatementFile } from "@/services/statementService";
+import { formatInstallmentParts, splitInstallmentTotal } from "@/utils/installments";
 import { expenseCategoryLabels } from "@/utils/labels/expenseCategoryLabels";
 import { expenseDescriptionLabel } from "@/utils/labels/expenseDescriptionLabel";
 import { frequencyLabels } from "@/utils/labels/frequencyLabels";
@@ -36,6 +37,7 @@ const CATEGORY_OPTIONS = [
 const FREQUENCY_OPTIONS = [
   { label: "Único", value: "One-time" },
   { label: "Mensal", value: "Monthly" },
+  { label: "Anual", value: "Yearly" },
 ];
 
 const PAYMENT_TYPE_OPTIONS = [
@@ -64,6 +66,7 @@ const REVIEW_FILTER_OPTIONS = [
 
 export default function ExpensesScreen() {
   const [amount, setAmount] = useState("");
+  const [amountMode, setAmountMode] = useState<"installment" | "total">("installment");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
@@ -176,14 +179,25 @@ export default function ExpensesScreen() {
       return;
     }
 
+    const count = Number(duration);
+    const installments = frequency === "Monthly" && amountMode === "total" && count > 1 ? splitInstallmentTotal(amount, count) : null;
+    if (frequency === "Monthly" && amountMode === "total" && count > 1 && !installments) {
+      setToast({ message: "Informe um total válido com até duas casas decimais e ao menos um centavo por parcela.", type: "error" });
+      return;
+    }
+    if (frequency !== "One-time" && (!Number.isSafeInteger(count) || count < 1)) {
+      setToast({ message: "Informe uma duração inteira e positiva.", type: "error" });
+      return;
+    }
     try {
       await costService.create({
         description: description || category,
-        amount: Number(amount),
+        amount: installments?.first ?? Number(amount),
+        installmentTotal: installments?.total ?? null,
         startDate: date,
         category,
         frequency,
-        durationInMonths: frequency === "One-time" ? 1 : Number(duration),
+        durationInMonths: frequency === "One-time" ? 1 : frequency === "Yearly" ? count * 12 : count,
         paymentType: paymentType as PaymentType,
         paid: false,
         creditCardId: paymentType === "Cartão de Crédito" ? Number(creditCardId) : undefined,
@@ -193,6 +207,7 @@ export default function ExpensesScreen() {
       setToast({ message: "Despesa salva com sucesso", type: "success" });
 
       setAmount("");
+      setAmountMode("installment");
       setCategory("");
       setDescription("");
       setPaymentType("");
@@ -374,7 +389,7 @@ export default function ExpensesScreen() {
           </CardHeader>
           <CardContent className="gap-4">
             <View>
-              <Label>{frequency === "Monthly" ? "Valor por mês" : "Valor"}</Label>
+              <Label>{frequency === "Monthly" ? (amountMode === "total" ? "Valor total da compra" : "Valor por mês") : "Valor"}</Label>
               <Input keyboardType="decimal-pad" placeholder="0.00" value={amount} onChangeText={setAmount} />
             </View>
 
@@ -401,9 +416,16 @@ export default function ExpensesScreen() {
               />
             </View>
 
-            {frequency === "Monthly" && amount && Number(duration) > 1 ? (
-              <Text className="text-cardForeground dark:text-cardForegroundDark">Total previsto: {formatCurrency(Number(amount) * Number(duration))} · {duration} × {formatCurrency(Number(amount))} por mês</Text>
-            ) : null}
+            {frequency === "Monthly" && (
+              <View>
+                <Label>O valor informado é</Label>
+                <Select value={amountMode} onValueChange={(value) => setAmountMode(value as "installment" | "total")} options={[{ label: "Valor de cada parcela", value: "installment" }, { label: "Valor total da compra", value: "total" }]} />
+              </View>
+            )}
+            {frequency === "Monthly" && amount && Number(duration) > 1 ? (() => {
+              const split = amountMode === "total" ? splitInstallmentTotal(amount, Number(duration)) : null;
+              return <Text className="text-cardForeground dark:text-cardForegroundDark">{amountMode === "total" ? (split ? `Total: ${formatCurrency(split.total)} · ${formatInstallmentParts(split.total, Number(duration))}` : "Informe um total válido para calcular as parcelas.") : `Total previsto: ${formatCurrency(Number(amount) * Number(duration))} · ${duration} × ${formatCurrency(Number(amount))} por mês`}</Text>;
+            })() : null}
 
             <View>
               <Label>Tipo de Pagamento</Label>
@@ -424,7 +446,7 @@ export default function ExpensesScreen() {
 
             {frequency !== "" && frequency !== "One-time" && (
               <View>
-                <Label>Número de parcelas</Label>
+                <Label>{frequency === "Yearly" ? "Número de anos" : "Número de parcelas"}</Label>
                 <Input keyboardType="number-pad" value={duration} onChangeText={setDuration} />
               </View>
             )}
@@ -487,7 +509,7 @@ export default function ExpensesScreen() {
                         </Text>
                       )}
                       {item.frequency === "Monthly" && item.durationInMonths > 1 && (
-                        <Text className="mt-1 text-sm text-cardForeground dark:text-cardForegroundDark">Total previsto: {formatCurrency(item.value * item.durationInMonths)} · {item.durationInMonths} × {formatCurrency(item.value)} por mês</Text>
+                        <Text className="mt-1 text-sm text-cardForeground dark:text-cardForegroundDark">Total previsto: {formatCurrency(item.installmentTotal ?? item.value * item.durationInMonths)} · {item.installmentTotal != null ? formatInstallmentParts(item.installmentTotal, item.durationInMonths) : `${item.durationInMonths} × ${formatCurrency(item.value)} por mês`}</Text>
                       )}
                       {item.origin === "notification" && (
                         <Text className={`mt-1 self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${item.reviewed ? "bg-financial-trustLight text-financial-trust dark:bg-financial-trustLightDark dark:text-financial-trustDark" : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"}`}>{item.reviewed ? "CAPTURADA · REVISADA" : "CAPTURADA · PENDENTE"}</Text>

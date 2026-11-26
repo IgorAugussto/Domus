@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { splitInstallmentTotal } from "../utils/installments";
 import { Button } from "../ui-components/button";
 import { Input } from "../ui-components/input";
 import { Label } from "../ui-components/label";
@@ -67,14 +68,18 @@ export function EditEntityModal({
   const [formData, setFormData] = useState<EditFormData>(emptyForm);
   const [selectedCard, setSelectedCard] = useState("");
   const [cardError, setCardError] = useState(false);
+  const [amountMode, setAmountMode] = useState<"installment" | "total">("installment");
+  const [amountError, setAmountError] = useState(false);
 
   useEffect(() => {
     if (!initialData) return;
 
+    setAmountMode(initialData.installmentTotal != null ? "total" : "installment");
+    setAmountError(false);
     setSelectedCard(String(initialData.creditCardId ?? ""));
     setCardError(false);
     setFormData({
-      amount: String(initialData.value ?? initialData.amount ?? ""),
+      amount: String(initialData.installmentTotal ?? initialData.value ?? initialData.amount ?? ""),
       startDate: String(initialData.startDate ?? ""),
       endDate: String(initialData.endDate ?? ""),
       category: String(initialData.category ?? ""),
@@ -97,10 +102,13 @@ export function EditEntityModal({
 
   const handleSave = () => {
     if (showExpenseCategories && initialData.paymentType === "Cartão de Crédito" && !selectedCard) { setCardError(true); return; }
+    const split = showExpenseCategories && formData.frequency === "Monthly" && amountMode === "total" && Number(formData.durationInMonths) > 1 ? splitInstallmentTotal(formData.amount, Number(formData.durationInMonths)) : null;
+    if (showExpenseCategories && formData.frequency === "Monthly" && amountMode === "total" && Number(formData.durationInMonths) > 1 && !split) { setAmountError(true); return; }
     onSave({
+      installmentTotal: showExpenseCategories ? split?.total ?? null : undefined,
       creditCardId: showExpenseCategories && initialData.paymentType === "Cartão de Crédito" ? Number(selectedCard) : undefined,
       ...formData,
-      amount: Number(formData.amount),
+      amount: split?.first ?? Number(formData.amount),
       durationInMonths: showDurationInMonths
         ? Number(formData.durationInMonths)
         : undefined,
@@ -124,7 +132,7 @@ export function EditEntityModal({
           {/* AMOUNT + START DATE */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Valor</Label>
+              <Label>{showExpenseCategories && formData.frequency === "Monthly" ? (amountMode === "total" ? "Valor total da compra" : "Valor por mês") : "Valor"}</Label>
               <Input
                 type="number"
                 value={formData.amount || ""}
@@ -153,6 +161,8 @@ export function EditEntityModal({
               {!creditCards.length && <p>Cadastre um cartão na aba Cartões.</p>}
             </div>
           )}
+
+          {amountError && <p role="alert">Informe um total válido com até duas casas decimais e ao menos um centavo por parcela.</p>}
 
           {/* INVESTMENTS ONLY */}
           {showFieldsInvestments && (
@@ -304,6 +314,7 @@ export function EditEntityModal({
                     <SelectItem className="select-item" value="Monthly">
                       Mensal
                     </SelectItem>
+                    {showExpenseCategories && <SelectItem className="select-item" value="Yearly">Anual</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>

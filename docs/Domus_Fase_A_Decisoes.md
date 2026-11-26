@@ -4,6 +4,7 @@ Documento de trabalho para retomar a conversa. Registra as respostas do usuário
 
 ## Decisões registradas
 
+- **Atualização posterior:** o usuário decidiu manter, por enquanto, o comportamento existente para o prazo das receitas e despesas recorrentes. Não alterar automaticamente as datas de término existentes; a decisão anterior de recorrência sem término fica suspensa.
 - Uma compra parcelada pode ser cadastrada pelo valor total ou pelo valor de cada parcela, à escolha do usuário. Mostrar o valor total e quanto compromete a receita por mês. Ao informar o total, dividir entre as parcelas com ajuste determinístico dos centavos para que a soma corresponda ao total; ao informar a parcela, calcular o total a partir do valor e da quantidade.
 - Apresentação desejada: compra de R$ 1.200 em 6 parcelas de R$ 200 mostra R$ 200 em cada mês aplicável no fluxo e gráfico; nos detalhes da compra/fatura, destacar R$ 1.200 como total da compra e R$ 200 por mês de forma visível. Distinguir total da compra do total da fatura, que pode incluir outras compras.
 - Compras parceladas já cadastradas serão preservadas e apresentadas para conferência do total e das parcelas na implementação futura; não alterar seus valores automaticamente antes da revisão do usuário.
