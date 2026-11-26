@@ -79,7 +79,8 @@ input[type="number"] {
 
 /*SELECT FORM*/
 /* Wrapper do Select (botão que abre) */
-.select-trigger {
+.select-trigger,
+[data-slot="select-trigger"] {
   background-color: var(--card);
   color: var(--card-foreground);
   border: 1px solid var(--border);
@@ -88,21 +89,24 @@ input[type="number"] {
 }
 
 /* Lista de opções */
-.select-content {
+.select-content,
+[data-slot="select-content"] {
   background-color: var(--card);
   color: var(--card-foreground);
   border: 1px solid var(--border);
 }
 
 /* Cada item da lista */
-.select-item {
+.select-item,
+[data-slot="select-item"] {
   background-color: var(--card);
   color: var(--card-foreground);
 }
 
-.select-item:hover {
+.select-item:hover,
+[data-slot="select-item"][data-highlighted] {
   background-color: var(--financial-income-light);
-  color: white;
+  color: var(--card-foreground);
 }
 
 
