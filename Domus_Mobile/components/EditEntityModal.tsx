@@ -74,6 +74,7 @@ interface EditEntityModalProps {
   showDurationInMonths?: boolean;
   showExpenseCategories?: boolean;
   showFieldsInvestments?: boolean;
+  creditCards?: { id: number; brand: string; nickname?: string; lastFourDigits: string }[];
 }
 
 export function EditEntityModal({
@@ -85,12 +86,17 @@ export function EditEntityModal({
   showDurationInMonths = false,
   showExpenseCategories = false,
   showFieldsInvestments = false,
+  creditCards = [],
 }: EditEntityModalProps) {
   const [formData, setFormData] = useState<EditFormData>(emptyForm);
+  const [selectedCard, setSelectedCard] = useState("");
+  const [cardError, setCardError] = useState(false);
 
   useEffect(() => {
     if (!initialData) return;
 
+    setSelectedCard(String(initialData.creditCardId ?? ""));
+    setCardError(false);
     setFormData({
       amount: String(initialData.value ?? initialData.amount ?? ""),
       startDate: String(initialData.startDate ?? ""),
@@ -109,7 +115,9 @@ export function EditEntityModal({
   };
 
   const handleSave = () => {
+    if (showExpenseCategories && initialData.paymentType === "Cartão de Crédito" && !selectedCard) { setCardError(true); return; }
     onSave({
+      creditCardId: showExpenseCategories && initialData.paymentType === "Cartão de Crédito" ? Number(selectedCard) : undefined,
       ...formData,
       amount: Number(formData.amount),
       durationInMonths: showDurationInMonths ? Number(formData.durationInMonths) : undefined,
@@ -134,6 +142,14 @@ export function EditEntityModal({
           </View>
 
           <ScrollView className="px-6 py-4" contentContainerClassName="gap-4">
+            {showExpenseCategories && initialData.paymentType === "Cartão de Crédito" && (
+              <View>
+                <Label>Cartão</Label>
+                <Select value={selectedCard} onValueChange={(value) => { setSelectedCard(value); setCardError(false); }} options={creditCards.map((card) => ({ value: String(card.id), label: `${card.nickname || card.brand} •••• ${card.lastFourDigits}` }))} placeholder="Selecionar cartão" />
+                {cardError && <Text accessibilityRole="alert">Selecione o cartão da compra.</Text>}
+                {!creditCards.length && <Text>Cadastre um cartão em Mais → Cartões.</Text>}
+              </View>
+            )}
             <View>
               <Label>Valor</Label>
               <Input

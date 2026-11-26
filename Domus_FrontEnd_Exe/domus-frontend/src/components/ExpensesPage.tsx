@@ -180,6 +180,11 @@ export default function ExpensesPage() {
       return;
     }
 
+    if (paymentType === "Cartão de Crédito" && !creditCardId) {
+      setToast({ message: "Selecione o cartão da compra.", type: "error" });
+      return;
+    }
+
     try {
       await costService.create({
         description: description || `${category}`,
@@ -834,6 +839,7 @@ export default function ExpensesPage() {
           initialData={editingCost as unknown as Record<string, unknown>}
           showDurationInMonths={true}
           showExpenseCategories={true}
+          creditCards={creditCards}
           onSave={handleEditCost}
           onCancel={() => {
             setShowEdit(false);

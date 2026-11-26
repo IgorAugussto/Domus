@@ -50,6 +50,7 @@ interface EditEntityModalProps {
   showDurationInMonths?: boolean;
   showExpenseCategories?: boolean;
   showFieldsInvestments?: boolean;
+  creditCards?: { id: number; brand: string; nickname?: string; lastFourDigits: string }[];
 }
 
 export function EditEntityModal({
@@ -61,12 +62,17 @@ export function EditEntityModal({
   showDurationInMonths = false,
   showExpenseCategories = false,
   showFieldsInvestments = false,
+  creditCards = [],
 }: EditEntityModalProps) {
   const [formData, setFormData] = useState<EditFormData>(emptyForm);
+  const [selectedCard, setSelectedCard] = useState("");
+  const [cardError, setCardError] = useState(false);
 
   useEffect(() => {
     if (!initialData) return;
 
+    setSelectedCard(String(initialData.creditCardId ?? ""));
+    setCardError(false);
     setFormData({
       amount: String(initialData.value ?? initialData.amount ?? ""),
       startDate: String(initialData.startDate ?? ""),
@@ -90,7 +96,9 @@ export function EditEntityModal({
   };
 
   const handleSave = () => {
+    if (showExpenseCategories && initialData.paymentType === "Cartão de Crédito" && !selectedCard) { setCardError(true); return; }
     onSave({
+      creditCardId: showExpenseCategories && initialData.paymentType === "Cartão de Crédito" ? Number(selectedCard) : undefined,
       ...formData,
       amount: Number(formData.amount),
       durationInMonths: showDurationInMonths
@@ -133,6 +141,18 @@ export function EditEntityModal({
               />
             </div>
           </div>
+
+          {showExpenseCategories && initialData.paymentType === "Cartão de Crédito" && (
+            <div className="space-y-2">
+              <Label>Cartão</Label>
+              <Select value={selectedCard} onValueChange={(value) => { setSelectedCard(value); setCardError(false); }}>
+                <SelectTrigger><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
+                <SelectContent>{creditCards.map((card) => <SelectItem key={card.id} value={String(card.id)}>{card.nickname || card.brand} •••• {card.lastFourDigits}</SelectItem>)}</SelectContent>
+              </Select>
+              {cardError && <p role="alert">Selecione o cartão da compra.</p>}
+              {!creditCards.length && <p>Cadastre um cartão na aba Cartões.</p>}
+            </div>
+          )}
 
           {/* INVESTMENTS ONLY */}
           {showFieldsInvestments && (

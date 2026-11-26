@@ -14,6 +14,7 @@ import { EditEntityModal } from "@/components/EditEntityModal";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { FeedbackToast } from "@/components/FeedbackToast";
 import { costService, type Cost, type PaymentType } from "@/services/costService";
+import { creditCardService, type CreditCard } from "@/services/creditCardService";
 import { statementService, type PickedStatementFile } from "@/services/statementService";
 import { expenseCategoryLabels } from "@/utils/labels/expenseCategoryLabels";
 import { expenseDescriptionLabel } from "@/utils/labels/expenseDescriptionLabel";
@@ -66,6 +67,8 @@ export default function ExpensesScreen() {
   const [date, setDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [costs, setCosts] = useState<Cost[]>([]);
   const [frequency, setFrequency] = useState("");
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [creditCardId, setCreditCardId] = useState("");
   const [paymentType, setPaymentType] = useState<PaymentType | "">("");
   const [duration, setDuration] = useState("");
 
@@ -89,6 +92,7 @@ export default function ExpensesScreen() {
 
   useEffect(() => {
     loadCosts();
+    creditCardService.getAll().then(setCreditCards).catch(() => setToast({ message: "Não foi possível carregar os cartões.", type: "error" }));
   }, []);
 
   useEffect(() => {
@@ -165,6 +169,11 @@ export default function ExpensesScreen() {
       return;
     }
 
+    if (paymentType === "Cartão de Crédito" && !creditCardId) {
+      setToast({ message: "Selecione o cartão da compra.", type: "error" });
+      return;
+    }
+
     try {
       await costService.create({
         description: description || category,
@@ -175,6 +184,7 @@ export default function ExpensesScreen() {
         durationInMonths: frequency === "One-time" ? 1 : Number(duration),
         paymentType: paymentType as PaymentType,
         paid: false,
+        creditCardId: paymentType === "Cartão de Crédito" ? Number(creditCardId) : undefined,
       });
 
       await loadCosts();
@@ -184,6 +194,7 @@ export default function ExpensesScreen() {
       setCategory("");
       setDescription("");
       setPaymentType("");
+      setCreditCardId("");
       setFrequency("");
       setDuration("");
       setDate(dayjs().format("YYYY-MM-DD"));
@@ -392,11 +403,18 @@ export default function ExpensesScreen() {
               <Label>Tipo de Pagamento</Label>
               <Select
                 value={paymentType}
-                onValueChange={(v) => setPaymentType(v as PaymentType)}
+                onValueChange={(v) => { setPaymentType(v as PaymentType); if (v !== "Cartão de Crédito") setCreditCardId(""); }}
                 options={PAYMENT_TYPE_OPTIONS}
                 placeholder="Selecionar tipo de pagamento"
               />
             </View>
+
+            {paymentType === "Cartão de Crédito" && (
+              <View>
+                <Label>Cartão</Label>
+                {creditCards.length ? <Select value={creditCardId} onValueChange={setCreditCardId} options={creditCards.map((card) => ({ value: String(card.id), label: `${card.nickname || card.brand} •••• ${card.lastFourDigits}` }))} placeholder="Selecionar cartão" /> : <Text>Cadastre um cartão em Mais → Cartões antes de continuar.</Text>}
+              </View>
+            )}
 
             {frequency !== "" && frequency !== "One-time" && (
               <View>
@@ -506,6 +524,7 @@ export default function ExpensesScreen() {
           initialData={editingCost as unknown as Record<string, unknown>}
           showDurationInMonths
           showExpenseCategories
+          creditCards={creditCards}
           onSave={handleEditCost}
           onCancel={() => {
             setShowEdit(false);

@@ -21,6 +21,7 @@ import { DollarSign, Plus, Upload } from "lucide-react";
 import { costService } from "../service/costService";
 import type { Cost, PaymentType } from "../service/costService";
 import { statementService } from "../service/statementService";
+import { creditCardService, type CreditCard } from "../service/creditCardService";
 import { EditEntityModal } from "./EditEntityModal";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
 import { FeedbackToast } from "./FeedbackToast";
@@ -40,6 +41,8 @@ export default function ExpensesPage() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [frequency, setFrequency] = useState("");
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [creditCardId, setCreditCardId] = useState("");
   const [paymentType, setPaymentType] = useState<PaymentType | "">("");
   const [duration, setDuration] = useState<number | null>(null);
   const [showDurationInput, setShowDurationInput] = useState(false);
@@ -69,6 +72,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     loadCosts();
+    creditCardService.getAll().then(setCreditCards).catch(() => setToast({ message: "Não foi possível carregar os cartões.", type: "error" }));
   }, []);
 
   // ── Polling de status do job de importação ───────────────────────────────
@@ -159,6 +163,11 @@ export default function ExpensesPage() {
       return;
     }
 
+    if (paymentType === "Cartão de Crédito" && !creditCardId) {
+      setToast({ message: "Selecione o cartão da compra.", type: "error" });
+      return;
+    }
+
     try {
       await costService.create({
         description: description || `${category}`,
@@ -169,6 +178,7 @@ export default function ExpensesPage() {
         durationInMonths: frequency === "One-time" ? 1 : (duration as number),
         paymentType: paymentType as PaymentType,
         paid: false,
+        creditCardId: paymentType === "Cartão de Crédito" ? Number(creditCardId) : undefined,
       });
 
       await loadCosts();
@@ -179,6 +189,7 @@ export default function ExpensesPage() {
       setCategory("");
       setDescription("");
       setPaymentType("");
+      setCreditCardId("");
       setDate(new Date().toISOString().split("T")[0]);
     } catch (error) {
       console.error("Erro ao salvar despesa:", error);
@@ -539,7 +550,7 @@ export default function ExpensesPage() {
               {/* TIPO DE PAGAMENTO */}
               <div className="space-y-2">
                 <Label htmlFor="paymentType">Tipo de Pagamento</Label>
-                <Select value={paymentType} onValueChange={(v) => setPaymentType(v as PaymentType)}>
+                <Select value={paymentType} onValueChange={(v) => { setPaymentType(v as PaymentType); if (v !== "Cartão de Crédito") setCreditCardId(""); }}>
                   <SelectTrigger className="select-trigger">
                     <SelectValue placeholder="Selecionar Tipo de Pagamento" />
                   </SelectTrigger>
@@ -553,6 +564,16 @@ export default function ExpensesPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {paymentType === "Cartão de Crédito" && (
+                <div className="space-y-2">
+                  <Label htmlFor="creditCard">Cartão</Label>
+                  {creditCards.length ? <Select value={creditCardId} onValueChange={setCreditCardId}>
+                    <SelectTrigger id="creditCard"><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
+                    <SelectContent>{creditCards.map((card) => <SelectItem key={card.id} value={String(card.id)}>{card.nickname || card.brand} •••• {card.lastFourDigits}</SelectItem>)}</SelectContent>
+                  </Select> : <p>Cadastre um cartão na aba Cartões antes de continuar.</p>}
+                </div>
+              )}
 
               {/* DURATION */}
               {showDurationInput && (
@@ -732,6 +753,7 @@ export default function ExpensesPage() {
           initialData={editingCost as unknown as Record<string, unknown>}
           showDurationInMonths={true}
           showExpenseCategories={true}
+          creditCards={creditCards}
           onSave={handleEditCost}
           onCancel={() => {
             setShowEdit(false);
