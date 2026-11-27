@@ -1,3 +1,4 @@
+import { parseCentavos, sumCentavos } from "../../../../shared/financial-intelligence";
 import { supabase } from "../lib/supabase";
 
 export interface FinancialAccount {
@@ -23,15 +24,10 @@ export function normalizeMoney(value: string): string | null {
 }
 
 export function balanceTotal(accounts: FinancialAccount[]): number | null {
-  let total = 0;
-  for (const account of accounts) {
-    const match = /^(-?)(\d+)\.(\d{2})$/.exec(account.balance);
-    if (!match) return null;
-    const cents = (Number(match[2]) * 100 + Number(match[3])) * (match[1] ? -1 : 1);
-    total += cents;
-    if (!Number.isSafeInteger(cents) || !Number.isSafeInteger(total)) return null;
-  }
-  return total / 100;
+  const balances = accounts.map(account => parseCentavos(account.balance));
+  if (balances.some(value => value === null)) return null;
+  const total = sumCentavos(balances.filter(value => value !== null));
+  return total === null ? null : total / 100;
 }
 
 export const financialAccountService = {
