@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -16,6 +17,7 @@ const currency = (value: number) => value.toLocaleString("pt-BR", { style: "curr
 const parseCurrency = (value: string) => Number(value.replace(/\./g, "").replace(",", "."));
 
 export default function StatementsScreen() {
+  const router = useRouter();
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [selectedCardId, setSelectedCardId] = useState("");
   const [yearMonth, setYearMonth] = useState(currentMonth());
@@ -89,14 +91,14 @@ export default function StatementsScreen() {
         <Card><CardContent className="gap-3 pt-4">
           <Select value={selectedCardId} onValueChange={setSelectedCardId} options={cards.map((card) => ({ label: `${card.nickname?.trim() || card.brand} •••• ${card.lastFourDigits}`, value: String(card.id) }))} placeholder="Selecionar cartão" />
           <View className="flex-row items-center justify-between"><Pressable className="rounded-lg border border-border px-3 py-2 dark:border-borderDark" onPress={() => setYearMonth((current) => addMonths(current, -1))}><Text className="text-sm text-cardForeground dark:text-cardForegroundDark">← Anterior</Text></Pressable><Text className="font-semibold text-financial-trust dark:text-financial-trustDark">{monthLabel(yearMonth)}</Text><Pressable className="rounded-lg border border-border px-3 py-2 dark:border-borderDark" onPress={() => setYearMonth((current) => addMonths(current, 1))}><Text className="text-sm text-cardForeground dark:text-cardForegroundDark">Próximo →</Text></Pressable></View>
-          <Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">{selectedCard?.statementClosingDay ? `Ciclo: após o dia ${selectedCard.statementClosingDay} do mês anterior até o dia ${selectedCard.statementClosingDay} deste mês.` : "Este cartão ainda não possui dia de fechamento cadastrado."}</Text>
+          <Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">{selectedCard?.statementClosingDay ? `Ciclo: a partir do fechamento anterior até a véspera do fechamento deste mês.` : "Este cartão ainda não possui dia de fechamento cadastrado."}</Text>
         </CardContent></Card>
 
         <Card><CardHeader><CardTitle>Prévia calculada</CardTitle></CardHeader><CardContent className="gap-3">
           {previewing ? <ActivityIndicator /> : <><View className="flex-row items-end justify-between"><Text className="text-sm text-mutedForeground dark:text-mutedForegroundDark">{items.length} lançamento(s) no ciclo</Text><Text className="text-xl font-bold text-cardForeground dark:text-cardForegroundDark">{currency(calculatedTotal)}</Text></View>{items.length === 0 ? <Text className="text-sm text-mutedForeground dark:text-mutedForegroundDark">Nenhuma despesa deste cartão foi encontrada neste ciclo.</Text> : items.map((item) => <View key={`${item.outgoingId}-${item.transactionDate}`} className="flex-row justify-between gap-3 border-t border-border pt-2 dark:border-borderDark"><View className="flex-1"><Text className="text-sm text-cardForeground dark:text-cardForegroundDark">{item.description}</Text><Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">{new Date(`${item.transactionDate}T12:00:00`).toLocaleDateString("pt-BR")}</Text></View><Text className="font-medium text-cardForeground dark:text-cardForegroundDark">{currency(item.value)}</Text></View>)}</>}
         </CardContent></Card>
 
-        <Card><CardHeader><CardTitle>Valor do banco</CardTitle></CardHeader><CardContent className="gap-3"><Input value={bankTotal} onChangeText={setBankTotal} keyboardType="decimal-pad" placeholder="Ex. 123,45" /><Input value={notes} onChangeText={setNotes} placeholder="Observação (opcional)" /><Button onPress={reconcile} disabled={saving || previewing}>{saving ? "Salvando..." : "Conferir e salvar"}</Button>{result && <Text className={result.reconciliationStatus === "reconciled" ? "text-sm text-financial-success dark:text-financial-successDark" : "text-sm text-financial-danger dark:text-financial-dangerDark"}>{result.reconciliationStatus === "reconciled" ? "Conferida: os valores coincidem." : `Diferença registrada: ${currency(result.difference)}.`}</Text>}<Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">Conferir uma fatura não a marca como paga. O pagamento continua sendo controlado separadamente.</Text></CardContent></Card>
+        <Card><CardHeader><CardTitle>Valor do banco</CardTitle></CardHeader><CardContent className="gap-3"><Input value={bankTotal} onChangeText={setBankTotal} keyboardType="decimal-pad" placeholder="Ex. 123,45" /><Input value={notes} onChangeText={setNotes} placeholder="Observação (opcional)" /><Button onPress={reconcile} disabled={saving || previewing}>{saving ? "Salvando..." : "Conferir e salvar"}</Button><Button variant="outline" onPress={() => router.push({ pathname: "./cash-movements", params: { kind: "statement", source: selectedCardId, month: yearMonth } })}>Registrar pagamento da fatura</Button>{result && <Text className={result.reconciliationStatus === "reconciled" ? "text-sm text-financial-success dark:text-financial-successDark" : "text-sm text-financial-danger dark:text-financial-dangerDark"}>{result.reconciliationStatus === "reconciled" ? "Conferida: os valores coincidem." : `Diferença registrada: ${currency(result.difference)}.`}</Text>}<Text className="text-xs text-mutedForeground dark:text-mutedForegroundDark">Conferir uma fatura não a marca como paga. O pagamento continua sendo controlado separadamente.</Text></CardContent></Card>
       </>}
     </ScrollView>
   );

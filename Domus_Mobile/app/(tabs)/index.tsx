@@ -216,9 +216,9 @@ export default function DashboardScreen() {
       <ScrollView contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
         <ScreenHeader title="Visão geral" subtitle="Acompanhe a saúde das suas finanças" icon="pie-chart" />
 
-        <Card><CardHeader><CardTitle>Saldo conjunto informado</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader><CardTitle>Saldo conjunto registrado</CardTitle></CardHeader><CardContent>
           <Text className="text-cardForeground dark:text-cardForegroundDark">{accountError ? "Não foi possível carregar o saldo." : accountBalances === null ? "Carregando..." : accountBalances.length === 0 ? "Nenhuma conta cadastrada." : accountTotal === null ? "Total indisponível" : currency(accountTotal)}</Text>
-          <Text className="mt-1 text-sm text-mutedForeground dark:text-mutedForegroundDark">Saldo informado manualmente; pagamentos e recebimentos ainda não o atualizam automaticamente.</Text>
+          <Text className="mt-1 text-sm text-mutedForeground dark:text-mutedForegroundDark">Inclui os pagamentos e recebimentos registrados em Movimentações.</Text>
         </CardContent></Card>
 
         <View className="flex-row flex-wrap gap-3">

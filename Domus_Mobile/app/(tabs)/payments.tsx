@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "expo-router";
 import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { FeedbackToast } from "@/components/FeedbackToast";
@@ -40,10 +41,11 @@ type FilterStatus = "ALL" | "PENDING" | "PAID";
 const FILTER_OPTIONS: { key: FilterStatus; label: string; color: string }[] = [
   { key: "ALL", label: "Todos", color: "#3b82f6" },
   { key: "PENDING", label: "Pendentes", color: "#ef4444" },
-  { key: "PAID", label: "Pagos", color: "#10b981" },
+  { key: "PAID", label: "Pagos / marcados", color: "#10b981" },
 ];
 
 export default function PaymentsScreen() {
+  const router = useRouter();
   const [yearMonth, setYearMonth] = useState(getCurrentYearMonth());
   const [payments, setPayments] = useState<PaymentMonthItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,22 +73,25 @@ export default function PaymentsScreen() {
   const handleToggle = async (outgoingId: number, paid: boolean) => {
     try {
       const updated = await paymentStatusService.toggle(outgoingId, yearMonth, paid);
-      setPayments((prev) => prev.map((p) => (p.outgoingId === outgoingId ? { ...p, paid: updated.paid } : p)));
-      setToast({ message: paid ? "Marcado como pago!" : "Marcado como pendente.", type: "success" });
+      setPayments((prev) => prev.map((p) => (p.outgoingId === outgoingId ? { ...p, paid: updated.paid, legacyMarked: updated.paid } : p)));
+      setToast({ message: paid ? "Marcação salva. O saldo não foi alterado." : "Marcação removida. O saldo não foi alterado.", type: "success" });
     } catch {
-      setToast({ message: "Erro ao atualizar pagamento.", type: "error" });
+      setToast({ message: "Para pagamentos pela conta, use Movimentações.", type: "error" });
     }
   };
 
   const handlePayAll = async () => {
-    const pending = payments.filter((p) => !p.paid);
+    const pending = payments.filter((p) => !p.paid && !p.hasCashMovements);
     if (pending.length === 0) return;
     try {
-      await Promise.all(pending.map((p) => paymentStatusService.toggle(p.outgoingId, yearMonth, true)));
-      setPayments((prev) => prev.map((p) => ({ ...p, paid: true })));
-      setToast({ message: "Todos os pagamentos do mês marcados como pagos!", type: "success" });
+      const results = await Promise.allSettled(pending.map((p) => paymentStatusService.toggle(p.outgoingId, yearMonth, true)));
+      setPayments(await paymentStatusService.getByMonth(yearMonth));
+      setToast(results.some((result) => result.status === "rejected")
+        ? { message: "Algumas marcações falharam. Confira a lista.", type: "error" }
+        : { message: "Marcações salvas. O saldo não foi alterado!", type: "success" });
     } catch {
-      setToast({ message: "Erro ao atualizar pagamentos.", type: "error" });
+      try { setPayments(await paymentStatusService.getByMonth(yearMonth)); } catch { /* mantém a lista anterior */ }
+      setToast({ message: "Algumas marcações podem ter falhado. Confira a lista.", type: "error" });
     }
   };
 
@@ -97,10 +102,10 @@ export default function PaymentsScreen() {
   }, [payments, filterStatus]);
 
   const grandTotal = payments.reduce((acc, p) => acc + Number(p.value), 0);
-  const pendingTotal = payments.filter((p) => !p.paid).reduce((acc, p) => acc + Number(p.value), 0);
+  const pendingTotal = payments.filter((p) => !p.paid).reduce((acc, p) => acc + Math.max(0, Number(p.value) - p.cashPaid), 0);
   const paidTotal = grandTotal - pendingTotal;
   const paidCount = payments.filter((p) => p.paid).length;
-  const allPaid = payments.length > 0 && paidCount === payments.length;
+  const allPaid = !payments.some((p) => !p.paid && !p.hasCashMovements);
 
   if (loading) {
     return (
@@ -121,6 +126,7 @@ export default function PaymentsScreen() {
         ListHeaderComponent={
           <View className="gap-4 mb-2">
             <ScreenHeader title="Pagamentos" subtitle="Acompanhe o que ainda precisa ser pago" icon="card" />
+            <Text className="text-sm text-cardForeground dark:text-cardForegroundDark">As marcações antigas não movimentam o saldo. Para registrar pagamento ou fatura, use <Text className="font-bold underline" onPress={() => router.push("./cash-movements")}>Movimentações</Text>.</Text>
 
             <View className="flex-row gap-1 p-1 rounded-xl border border-border dark:border-borderDark self-start">
               {FILTER_OPTIONS.map((opt) => {
@@ -180,7 +186,7 @@ export default function PaymentsScreen() {
             <View className="flex-row gap-3">
               <SummaryTile emoji="📊" label="Total Geral" value={grandTotal} colorClass="text-cardForeground dark:text-cardForegroundDark" />
               <SummaryTile emoji="⏳" label="Pendente" value={pendingTotal} colorClass="text-financial-danger dark:text-financial-dangerDark" />
-              <SummaryTile emoji="✅" label="Pago" value={paidTotal} colorClass="text-financial-success dark:text-financial-successDark" />
+              <SummaryTile emoji="✅" label="Pago ou marcado" value={paidTotal} colorClass="text-financial-success dark:text-financial-successDark" />
             </View>
 
             <Card>
@@ -189,7 +195,7 @@ export default function PaymentsScreen() {
                   <CardTitle className="text-base">
                     {formatYearMonth(yearMonth)}{" "}
                     <Text className="text-xs font-normal text-mutedForeground dark:text-mutedForegroundDark">
-                      {paidCount}/{payments.length} pago{paidCount !== 1 ? "s" : ""}
+                      {paidCount}/{payments.length} pago(s) ou marcado(s)
                     </Text>
                   </CardTitle>
 
@@ -199,7 +205,7 @@ export default function PaymentsScreen() {
                       className="px-3 py-1.5 rounded-lg border border-financial-success dark:border-financial-successDark"
                     >
                       <Text className="text-xs font-medium text-financial-success dark:text-financial-successDark">
-                        ✅ Pagar todos
+                        ✅ Marcar todos (sem alterar saldo)
                       </Text>
                     </Pressable>
                   )}
@@ -235,7 +241,7 @@ export default function PaymentsScreen() {
         }
         ItemSeparatorComponent={() => <View className="h-2" />}
         renderItem={({ item }) => (
-          <PaymentRow item={item} onToggle={handleToggle} />
+          <PaymentRow item={item} onToggle={handleToggle} onRegister={(payment) => payment.paymentType === "Cartão de Crédito" ? router.push("./statements") : router.push({ pathname: "./cash-movements", params: { kind: "expense", source: String(payment.outgoingId), month: yearMonth } })} />
         )}
       />
 
@@ -267,9 +273,11 @@ function SummaryTile({
 function PaymentRow({
   item,
   onToggle,
+  onRegister,
 }: {
   item: PaymentMonthItem;
   onToggle: (outgoingId: number, paid: boolean) => void;
+  onRegister: (item: PaymentMonthItem) => void;
 }) {
   const accent = PAYMENT_ACCENT[item.paymentType] ?? PAYMENT_ACCENT["Cartão de Crédito"];
 
@@ -303,13 +311,15 @@ function PaymentRow({
         }}
       >
         <Text className="text-xs font-medium" style={{ color: item.paid ? "#10b981" : accent }}>
-          {item.paid ? "Pago" : "Pendente"}
+          {item.hasCashMovements ? (item.paid ? "Pago pela conta" : item.cashPaid > 0 ? `Parcial: ${currency(item.cashPaid)}` : "Estornado") : item.paid ? "Marcado (sem conta)" : "Pendente"}
         </Text>
       </View>
 
-      <Pressable onPress={() => onToggle(item.outgoingId, !item.paid)}>
+      {(item.paymentType === "Cartão de Crédito" || !item.paid) && <Pressable accessibilityRole="button" onPress={() => onRegister(item)}><Text className="text-xs font-semibold text-financial-trust dark:text-financial-trustDark">{item.paymentType === "Cartão de Crédito" ? "Fatura" : "Registrar"}</Text></Pressable>}
+
+      {!item.hasCashMovements && <Pressable accessibilityLabel="Alterar marcação sem movimentar saldo" onPress={() => onToggle(item.outgoingId, !item.paid)}>
         <Text className="text-base">{item.paid ? "↩️" : "✅"}</Text>
-      </Pressable>
+      </Pressable>}
     </View>
   );
 }

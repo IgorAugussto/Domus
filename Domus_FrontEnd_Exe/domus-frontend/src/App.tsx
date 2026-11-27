@@ -13,6 +13,7 @@ import { CreditCardsPage } from "./components/CreditCardsPage";
 import { StatementReconciliationPage } from "./components/StatementReconciliationPage";
 import { NotificationReviewPage } from "./components/NotificationReviewPage";
 import { FinancialAccountsPage } from "./components/FinancialAccountsPage";
+import { CashMovementsPage } from "./components/CashMovementsPage";
 
 
 
@@ -28,6 +29,7 @@ export default function App() {
         <Route element={<PrivateLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/accounts" element={<FinancialAccountsPage />} />
+          <Route path="/movements" element={<CashMovementsPage />} />
           <Route path="/income" element={<IncomePage />} />
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/investments" element={<InvestmentsPage />} />

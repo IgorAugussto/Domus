@@ -31,6 +31,7 @@ export default function MoreScreen() {
       <Card>
         <CardHeader><CardTitle>Financeiro</CardTitle></CardHeader>
         <CardContent className="gap-1">
+          <MenuRow title="Movimentações" description="Registre entradas e saídas efetivas" icon="swap-vertical" color="#3b82f6" onPress={() => router.push("./cash-movements")} />
           <MenuRow title="Contas e saldos" description="Cadastre contas e confira saldos informados" icon="wallet" color="#3b82f6" onPress={() => router.push("./accounts")} />
           <MenuRow title="Investimentos" description="Acompanhe sua carteira e rentabilidade" icon="trending-up" color="#f59e0b" backgroundClassName="bg-financial-investmentLight dark:bg-financial-investmentLightDark" onPress={() => router.push("./investments")} />
           <MenuRow title="Cartões e faturas" description="Cadastre cartões e prepare a conferência da fatura" icon="card" color="#3b82f6" onPress={() => router.push("./cards")} />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { View, Text, FlatList, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import dayjs from "dayjs";
 import * as DocumentPicker from "expo-document-picker";
@@ -15,6 +15,8 @@ import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { FeedbackToast } from "@/components/FeedbackToast";
 import { costService, type Cost, type PaymentType } from "@/services/costService";
 import { creditCardService, type CreditCard } from "@/services/creditCardService";
+import { financialAccountService, type FinancialAccount } from "@/services/financialAccountService";
+import { newRequestKey } from "@/services/cashMovementService";
 import { statementService, type PickedStatementFile } from "@/services/statementService";
 import { formatInstallmentParts, splitInstallmentTotal } from "@/utils/installments";
 import { expenseCategoryLabels } from "@/utils/labels/expenseCategoryLabels";
@@ -43,6 +45,8 @@ const FREQUENCY_OPTIONS = [
 const PAYMENT_TYPE_OPTIONS = [
   { label: "Cartão de Crédito", value: "Cartão de Crédito" },
   { label: "Boleto", value: "Boleto" },
+  { label: "Pix", value: "Pix" },
+  { label: "Débito", value: "Débito" },
 ];
 
 const PERIOD_FILTER_OPTIONS = [
@@ -66,6 +70,11 @@ const REVIEW_FILTER_OPTIONS = [
 
 export default function ExpensesScreen() {
   const [amount, setAmount] = useState("");
+  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [plannedAccountId, setPlannedAccountId] = useState("");
+  const [paidNow, setPaidNow] = useState(false);
+  const [savingExpense, setSavingExpense] = useState(false);
+  const immediateKey = useRef(newRequestKey());
   const [amountMode, setAmountMode] = useState<"installment" | "total">("installment");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -97,6 +106,7 @@ export default function ExpensesScreen() {
 
   useEffect(() => {
     loadCosts();
+    financialAccountService.list().then(setAccounts).catch(() => setToast({ message: "Não foi possível carregar as contas.", type: "error" }));
     creditCardService.getAll().then(setCreditCards).catch(() => setToast({ message: "Não foi possível carregar os cartões.", type: "error" }));
   }, []);
 
@@ -189,8 +199,15 @@ export default function ExpensesScreen() {
       setToast({ message: "Informe uma duração inteira e positiva.", type: "error" });
       return;
     }
+    if (!paymentType || !frequency) { setToast({ message: "Selecione a frequência e o tipo de pagamento.", type: "error" }); return; }
+    if (paidNow && !plannedAccountId) { setToast({ message: "Selecione a conta do pagamento.", type: "error" }); return; }
+    if (paidNow && (frequency !== "One-time" || (paymentType !== "Pix" && paymentType !== "Débito"))) { setToast({ message: "O pagamento no cadastro é disponível para Pix ou débito únicos.", type: "error" }); return; }
+    setSavingExpense(true);
     try {
-      await costService.create({
+      if (paidNow && (paymentType === "Pix" || paymentType === "Débito")) {
+        await costService.createImmediate({ description: description || category, amount: Number(amount), date, category, paymentType, accountId: Number(plannedAccountId), requestKey: immediateKey.current });
+        immediateKey.current = newRequestKey();
+      } else await costService.create({
         description: description || category,
         amount: installments?.first ?? Number(amount),
         installmentTotal: installments?.total ?? null,
@@ -201,6 +218,7 @@ export default function ExpensesScreen() {
         paymentType: paymentType as PaymentType,
         paid: false,
         creditCardId: paymentType === "Cartão de Crédito" ? Number(creditCardId) : undefined,
+        plannedAccountId: plannedAccountId ? Number(plannedAccountId) : null,
       });
 
       await loadCosts();
@@ -211,14 +229,16 @@ export default function ExpensesScreen() {
       setCategory("");
       setDescription("");
       setPaymentType("");
+      setPlannedAccountId("");
+      setPaidNow(false);
       setCreditCardId("");
       setFrequency("");
       setDuration("");
       setDate(dayjs().format("YYYY-MM-DD"));
     } catch (error) {
       console.error("Erro ao salvar despesa:", error);
-      setToast({ message: "Erro ao salvar despesa. Tente novamente.", type: "error" });
-    }
+      setToast({ message: typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : "Erro ao salvar despesa. Tente novamente.", type: "error" });
+    } finally { setSavingExpense(false); }
   };
 
   const handleDeleteCost = async () => {
@@ -229,7 +249,7 @@ export default function ExpensesScreen() {
       setShowDelete(false);
     } catch (error) {
       console.error("Erro ao deletar cost:", error);
-      setToast({ message: "Erro ao deletar despesa.", type: "error" });
+      setToast({ message: typeof error === "object" && error !== null && "code" in error && error.code === "23503" ? "Esta despesa possui movimentações e não pode ser excluída." : "Não foi possível excluir a despesa.", type: "error" });
     }
   };
 
@@ -242,7 +262,7 @@ export default function ExpensesScreen() {
       setEditingCost(null);
     } catch (error) {
       console.error("Erro ao editar cost:", error);
-      setToast({ message: "Erro ao editar despesa.", type: "error" });
+      setToast({ message: typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : "Não foi possível editar a despesa.", type: "error" });
     }
   };
 
@@ -409,6 +429,7 @@ export default function ExpensesScreen() {
                 value={frequency}
                 onValueChange={(v) => {
                   setFrequency(v);
+                  setPaidNow(v === "One-time" && (paymentType === "Pix" || paymentType === "Débito"));
                   setDuration(v === "One-time" ? "1" : "");
                 }}
                 options={FREQUENCY_OPTIONS}
@@ -431,7 +452,7 @@ export default function ExpensesScreen() {
               <Label>Tipo de Pagamento</Label>
               <Select
                 value={paymentType}
-                onValueChange={(v) => { setPaymentType(v as PaymentType); if (v !== "Cartão de Crédito") setCreditCardId(""); }}
+                onValueChange={(v) => { setPaymentType(v as PaymentType); setPaidNow(frequency === "One-time" && (v === "Pix" || v === "Débito")); if (v !== "Cartão de Crédito") setCreditCardId(""); }}
                 options={PAYMENT_TYPE_OPTIONS}
                 placeholder="Selecionar tipo de pagamento"
               />
@@ -443,6 +464,9 @@ export default function ExpensesScreen() {
                 {creditCards.length ? <Select value={creditCardId} onValueChange={setCreditCardId} options={creditCards.map((card) => ({ value: String(card.id), label: `${card.nickname || card.brand} •••• ${card.lastFourDigits}` }))} placeholder="Selecionar cartão" /> : <Text>Cadastre um cartão em Mais → Cartões antes de continuar.</Text>}
               </View>
             )}
+
+            {paymentType !== "" && <View><Label>Conta prevista{paidNow ? " (obrigatória)" : " (opcional)"}</Label>{accounts.length ? <Select value={plannedAccountId} onValueChange={value => setPlannedAccountId(value === "none" ? "" : value)} options={[{ value: "none", label: "Sem conta definida" }, ...accounts.map(item => ({ value: String(item.account_id), label: `${item.name} · ${item.holder_name}` }))]} placeholder="Selecionar conta" /> : <Text className="text-cardForeground dark:text-cardForegroundDark">Cadastre uma conta em Contas e saldos.</Text>}</View>}
+            {(paymentType === "Pix" || paymentType === "Débito") && frequency === "One-time" && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: paidNow }} onPress={() => setPaidNow(!paidNow)} className="flex-row items-center gap-2"><Ionicons name={paidNow ? "checkbox" : "square-outline"} size={22} color="#3b82f6" /><Text className="text-cardForeground dark:text-cardForegroundDark">Já pago: descontar da conta na data informada</Text></Pressable>}
 
             {frequency !== "" && frequency !== "One-time" && (
               <View>
@@ -458,7 +482,7 @@ export default function ExpensesScreen() {
 
             <Button
               onPress={handleSubmit}
-              disabled={!amount || !category || !date}
+              disabled={savingExpense || !amount || !category || !date}
               className="bg-financial-danger dark:bg-financial-dangerDark"
             >
               Adicionar Despesa
@@ -556,6 +580,7 @@ export default function ExpensesScreen() {
           showDurationInMonths
           showExpenseCategories
           creditCards={creditCards}
+          financialAccounts={accounts}
           onSave={handleEditCost}
           onCancel={() => {
             setShowEdit(false);

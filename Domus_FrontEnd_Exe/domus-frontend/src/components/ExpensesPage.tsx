@@ -22,6 +22,8 @@ import { DollarSign, Plus, Upload } from "lucide-react";
 import { costService } from "../service/costService";
 import type { Cost, PaymentType } from "../service/costService";
 import { statementService } from "../service/statementService";
+import { financialAccountService, type FinancialAccount } from "../service/financialAccountService";
+import { newRequestKey } from "../service/cashMovementService";
 import { creditCardService, type CreditCard } from "../service/creditCardService";
 import { EditEntityModal } from "./EditEntityModal";
 import { DeleteConfirmModal } from "../components/DeleteConfirmModal";
@@ -46,6 +48,11 @@ function cardLabel(card: CreditCard): string {
 export default function ExpensesPage() {
   const navigate = useNavigate();
   const [amount, setAmount] = useState("");
+  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [plannedAccountId, setPlannedAccountId] = useState("");
+  const [paidNow, setPaidNow] = useState(false);
+  const [savingExpense, setSavingExpense] = useState(false);
+  const immediateKey = useRef(newRequestKey());
   const [amountMode, setAmountMode] = useState<"installment" | "total">("installment");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -84,6 +91,7 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     loadCosts();
+    financialAccountService.list().then(setAccounts).catch(() => setToast({ message: "Não foi possível carregar as contas.", type: "error" }));
     loadCreditCards();
   }, []);
 
@@ -199,8 +207,15 @@ export default function ExpensesPage() {
       setToast({ message: "Informe uma duração inteira e positiva.", type: "error" });
       return;
     }
+    if (!paymentType || !frequency) { setToast({ message: "Selecione a frequência e o tipo de pagamento.", type: "error" }); return; }
+    if (paidNow && !plannedAccountId) { setToast({ message: "Selecione a conta do pagamento.", type: "error" }); return; }
+    if (paidNow && (frequency !== "One-time" || (paymentType !== "Pix" && paymentType !== "Débito"))) { setToast({ message: "O pagamento no cadastro é disponível para Pix ou débito únicos.", type: "error" }); return; }
+    setSavingExpense(true);
     try {
-      await costService.create({
+      if (paidNow && (paymentType === "Pix" || paymentType === "Débito")) {
+        await costService.createImmediate({ description: description || category, amount: Number(amount), date, category, paymentType, accountId: Number(plannedAccountId), requestKey: immediateKey.current });
+        immediateKey.current = newRequestKey();
+      } else await costService.create({
         description: description || `${category}`,
         amount: installments?.first ?? Number(amount),
         installmentTotal: installments?.total ?? null,
@@ -211,6 +226,7 @@ export default function ExpensesPage() {
         paymentType: paymentType as PaymentType,
         paid: false,
         creditCardId: creditCardId ? Number(creditCardId) : undefined,
+        plannedAccountId: plannedAccountId ? Number(plannedAccountId) : null,
       });
 
       await loadCosts();
@@ -222,16 +238,19 @@ export default function ExpensesPage() {
       setCategory("");
       setDescription("");
       setPaymentType("");
+      setPlannedAccountId("");
+      setPaidNow(false);
       setCreditCardId("");
       setDate(new Date().toISOString().split("T")[0]);
     } catch (error) {
       console.error("Erro ao salvar despesa:", error);
-      setToast({ message: "Preencha todos os campos", type: "error" });
-    }
+      setToast({ message: typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : "Não foi possível salvar a despesa.", type: "error" });
+    } finally { setSavingExpense(false); }
   };
 
   const handleFrequencyChange = (value: string) => {
     setFrequency(value);
+    setPaidNow(value === "One-time" && (paymentType === "Pix" || paymentType === "Débito"));
     if (value === "One-time") {
       setDuration(1);
       setShowDurationInput(false);
@@ -249,7 +268,7 @@ export default function ExpensesPage() {
       setShowDelete(false);
     } catch (error) {
       console.error("Erro ao deletar cost:", error);
-      alert("Erro ao deletar renda.");
+      setToast({ message: typeof error === "object" && error !== null && "code" in error && error.code === "23503" ? "Esta despesa possui movimentações e não pode ser excluída." : "Não foi possível excluir a despesa.", type: "error" });
     }
   };
 
@@ -262,7 +281,7 @@ export default function ExpensesPage() {
       setEditingCost(null);
     } catch (error) {
       console.error("Erro ao editar cost:", error);
-      alert("Erro ao editar cost.");
+      setToast({ message: typeof error === "object" && error !== null && "message" in error && typeof error.message === "string" ? error.message : "Não foi possível editar a despesa.", type: "error" });
     }
   };
 
@@ -648,6 +667,7 @@ export default function ExpensesPage() {
                   value={paymentType}
                   onValueChange={(v) => {
                     setPaymentType(v as PaymentType);
+                    setPaidNow(frequency === "One-time" && (v === "Pix" || v === "Débito"));
                     if (v !== "Cartão de Crédito") setCreditCardId("");
                   }}
                 >
@@ -661,6 +681,8 @@ export default function ExpensesPage() {
                     <SelectItem className="select-item" value="Boleto">
                       Boleto
                     </SelectItem>
+                    <SelectItem className="select-item" value="Pix">Pix</SelectItem>
+                    <SelectItem className="select-item" value="Débito">Débito</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -696,6 +718,16 @@ export default function ExpensesPage() {
                     </p>
                   )}
                 </div>
+              )}
+
+              {paymentType && (
+                <div className="space-y-2">
+                  <Label>Conta prevista{paidNow ? " (obrigatória)" : " (opcional)"}</Label>
+                  {accounts.length ? <Select value={plannedAccountId} onValueChange={value => setPlannedAccountId(value === "none" ? "" : value)}><SelectTrigger className="select-trigger"><SelectValue placeholder="Selecionar conta" /></SelectTrigger><SelectContent className="select-content"><SelectItem className="select-item" value="none">Sem conta definida</SelectItem>{accounts.map(item => <SelectItem className="select-item" key={item.account_id} value={String(item.account_id)}>{item.name} · {item.holder_name}</SelectItem>)}</SelectContent></Select> : <p>Cadastre uma conta em Contas e saldos.</p>}
+                </div>
+              )}
+              {(paymentType === "Pix" || paymentType === "Débito") && frequency === "One-time" && (
+                <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={paidNow} onChange={event => setPaidNow(event.target.checked)} /> Já pago: descontar da conta na data informada</label>
               )}
 
               {/* DURATION */}
@@ -734,6 +766,7 @@ export default function ExpensesPage() {
 
             <Button
               type="submit"
+              disabled={savingExpense}
               className="w-full"
               style={{
                 background: "var(--financial-danger)",
@@ -882,6 +915,7 @@ export default function ExpensesPage() {
           showDurationInMonths={true}
           showExpenseCategories={true}
           creditCards={creditCards}
+          financialAccounts={accounts}
           onSave={handleEditCost}
           onCancel={() => {
             setShowEdit(false);

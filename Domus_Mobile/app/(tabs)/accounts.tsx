@@ -59,8 +59,8 @@ export default function AccountsScreen() {
   const total = balanceTotal(accounts);
   return <ScrollView className="flex-1 bg-white dark:bg-slate-900" contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
     <ScreenHeader title="Contas e saldos" subtitle="Saldos informados por você" icon="wallet" />
-    <Text className="text-sm text-cardForeground dark:text-cardForegroundDark">Pagamentos e recebimentos ainda não atualizam estes saldos automaticamente.</Text>
-    <Card><CardHeader><CardTitle>Saldo conjunto informado</CardTitle></CardHeader><CardContent><Text className="text-cardForeground dark:text-cardForegroundDark">{loading ? "Carregando..." : loadFailed ? "Não foi possível carregar o saldo." : accounts.length === 0 ? "Cadastre uma conta para começar." : total === null ? "Total indisponível" : money(total)}</Text></CardContent></Card>
+    <Text className="text-sm text-cardForeground dark:text-cardForegroundDark">Os pagamentos e recebimentos registrados em Movimentações atualizam o saldo.</Text>
+    <Card><CardHeader><CardTitle>Saldo conjunto registrado</CardTitle></CardHeader><CardContent><Text className="text-cardForeground dark:text-cardForegroundDark">{loading ? "Carregando..." : loadFailed ? "Não foi possível carregar o saldo." : accounts.length === 0 ? "Cadastre uma conta para começar." : total === null ? "Total indisponível" : money(total)}</Text></CardContent></Card>
     <Card><CardHeader><CardTitle>Cadastrar conta</CardTitle></CardHeader><CardContent className="gap-3">
       <View><Label>Nome da conta</Label><Input value={name} onChangeText={setName} maxLength={100} /></View>
       <View><Label>Titular</Label><Input value={holder} onChangeText={setHolder} maxLength={100} /></View>
@@ -69,7 +69,7 @@ export default function AccountsScreen() {
       <Button disabled={busy} onPress={create}>Cadastrar conta</Button>
     </CardContent></Card>
     {accounts.map(account => <Card key={account.account_id}><CardHeader><CardTitle>{account.name} · {account.holder_name}</CardTitle></CardHeader><CardContent className="gap-3">
-      <Text className="font-semibold text-cardForeground dark:text-cardForegroundDark">Saldo informado: {money(Number(account.balance))}</Text>
+      <Text className="font-semibold text-cardForeground dark:text-cardForegroundDark">Saldo registrado: {money(Number(account.balance))}</Text>
       <Text className="text-sm text-mutedForeground dark:text-mutedForegroundDark">Data do saldo inicial: {readableDate(account.opening_date)} · Último registro: {new Date(account.confirmed_at).toLocaleString("pt-BR")}</Text>
       <Button variant="outline" onPress={() => { setSelected(account.account_id); setAmount(account.balance); setNote(""); }}>Atualizar saldo</Button>
       <Button variant="outline" onPress={() => void showHistory(account.account_id)}>{historyId === account.account_id ? "Ocultar histórico" : "Ver histórico"}</Button>

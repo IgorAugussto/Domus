@@ -52,6 +52,7 @@ interface EditEntityModalProps {
   showExpenseCategories?: boolean;
   showFieldsInvestments?: boolean;
   creditCards?: { id: number; brand: string; nickname?: string; lastFourDigits: string }[];
+  financialAccounts?: { account_id: number; name: string; holder_name: string }[];
 }
 
 export function EditEntityModal({
@@ -64,9 +65,11 @@ export function EditEntityModal({
   showExpenseCategories = false,
   showFieldsInvestments = false,
   creditCards = [],
+  financialAccounts = [],
 }: EditEntityModalProps) {
   const [formData, setFormData] = useState<EditFormData>(emptyForm);
   const [selectedCard, setSelectedCard] = useState("");
+  const [plannedAccount, setPlannedAccount] = useState("none");
   const [cardError, setCardError] = useState(false);
   const [amountMode, setAmountMode] = useState<"installment" | "total">("installment");
   const [amountError, setAmountError] = useState(false);
@@ -77,6 +80,7 @@ export function EditEntityModal({
     setAmountMode(initialData.installmentTotal != null ? "total" : "installment");
     setAmountError(false);
     setSelectedCard(String(initialData.creditCardId ?? ""));
+    setPlannedAccount(initialData.plannedAccountId == null ? "none" : String(initialData.plannedAccountId));
     setCardError(false);
     setFormData({
       amount: String(initialData.installmentTotal ?? initialData.value ?? initialData.amount ?? ""),
@@ -106,6 +110,7 @@ export function EditEntityModal({
     if (showExpenseCategories && formData.frequency === "Monthly" && amountMode === "total" && Number(formData.durationInMonths) > 1 && !split) { setAmountError(true); return; }
     onSave({
       installmentTotal: showExpenseCategories ? split?.total ?? null : undefined,
+      plannedAccountId: showExpenseCategories ? (plannedAccount === "none" ? null : Number(plannedAccount)) : undefined,
       creditCardId: showExpenseCategories && initialData.paymentType === "Cartão de Crédito" ? Number(selectedCard) : undefined,
       ...formData,
       amount: split?.first ?? Number(formData.amount),
@@ -163,6 +168,8 @@ export function EditEntityModal({
           )}
 
           {amountError && <p role="alert">Informe um total válido com até duas casas decimais e ao menos um centavo por parcela.</p>}
+
+          {showExpenseCategories && <div className="space-y-2"><Label>Conta prevista</Label><Select value={plannedAccount} onValueChange={setPlannedAccount}><SelectTrigger className="select-trigger"><SelectValue /></SelectTrigger><SelectContent className="select-content"><SelectItem className="select-item" value="none">Sem conta definida</SelectItem>{financialAccounts.map(account => <SelectItem className="select-item" key={account.account_id} value={String(account.account_id)}>{account.name} · {account.holder_name}</SelectItem>)}</SelectContent></Select></div>}
 
           {/* INVESTMENTS ONLY */}
           {showFieldsInvestments && (

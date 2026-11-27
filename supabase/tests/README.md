@@ -12,6 +12,7 @@ PGLITE_MODULE=/tmp/domus-phase-b/node_modules/@electric-sql/pglite/dist/index.js
 PGLITE_MODULE=/tmp/domus-phase-b/node_modules/@electric-sql/pglite/dist/index.js node supabase/tests/annual_installments.mjs
 PGLITE_MODULE=/tmp/domus-phase-b/node_modules/@electric-sql/pglite/dist/index.js node supabase/tests/financial_accounts.mjs
 node supabase/tests/financial_accounts_ui.mjs
+PGLITE_MODULE=/tmp/domus-phase-b/node_modules/@electric-sql/pglite/dist/index.js node supabase/tests/cash_movements.mjs
 ```
 
-Os testes cobrem ciclos e parcelas, resumo mensal, distribuição diária, contas e ajustes. A preparação de autenticação e tabelas usa substitutos mínimos, não credenciais nem dados reais.
+Os testes cobrem ciclos e parcelas, resumo mensal, distribuição diária, contas, ajustes e movimentações. A preparação de autenticação e tabelas usa substitutos mínimos, não credenciais nem dados reais.

@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useState, useEffect, useMemo } from "react";
 import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
 import dayjs from "dayjs";
@@ -35,6 +36,7 @@ const PERIOD_FILTER_OPTIONS = [{ label: "Todo o período", value: "ALL" }, { lab
 const FREQUENCY_FILTER_OPTIONS = [{ label: "Todas as frequências", value: "ALL" }, ...FREQUENCY_OPTIONS];
 
 export default function IncomeScreen() {
+  const router = useRouter();
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -122,7 +124,7 @@ export default function IncomeScreen() {
       setShowDelete(false);
     } catch (error) {
       console.error("Erro ao deletar income:", error);
-      setToast({ message: "Erro ao deletar renda.", type: "error" });
+      setToast({ message: typeof error === "object" && error !== null && "code" in error && error.code === "23503" ? "Esta receita possui recebimentos ou ajustes de previsão e não pode ser excluída." : "Não foi possível excluir a receita.", type: "error" });
     }
   };
 
@@ -235,6 +237,10 @@ export default function IncomeScreen() {
                       <Text className="font-bold text-financial-income dark:text-financial-incomeDark">
                         R$ {item.value}
                       </Text>
+
+                      <Pressable accessibilityRole="button" accessibilityLabel="Registrar recebimento" onPress={() => router.push({ pathname: "./cash-movements", params: { kind: "income", source: String(item.id) } })}>
+                        <Ionicons name="cash-outline" size={22} color="#16a34a" />
+                      </Pressable>
 
                       <Pressable
                         onPress={() => {

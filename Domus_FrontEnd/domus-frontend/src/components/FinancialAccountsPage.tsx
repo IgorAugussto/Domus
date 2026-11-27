@@ -65,9 +65,9 @@ export function FinancialAccountsPage() {
   const total = balanceTotal(accounts);
 
   return <div className="space-y-6">
-    <div><h2 className="text-xl font-bold" style={{ color: "var(--financial-trust)" }}>Contas e saldos</h2><p className="mt-1 text-sm" style={{ color: "var(--card-foreground)" }}>Saldos informados por você. Pagamentos e recebimentos ainda não os atualizam automaticamente.</p></div>
+    <div><h2 className="text-xl font-bold" style={{ color: "var(--financial-trust)" }}>Contas e saldos</h2><p className="mt-1 text-sm" style={{ color: "var(--card-foreground)" }}>Os pagamentos e recebimentos registrados em Movimentações atualizam o saldo.</p></div>
     {message && <p role="status" style={{ color: "var(--card-foreground)" }}>{message}</p>}
-    <Card><CardHeader><CardTitle>Saldo conjunto informado</CardTitle></CardHeader><CardContent>{loading ? "Carregando..." : loadFailed ? "Não foi possível carregar o saldo." : accounts.length === 0 ? "Cadastre uma conta para começar." : total === null ? "Total indisponível" : <strong>{money(total)}</strong>}</CardContent></Card>
+    <Card><CardHeader><CardTitle>Saldo conjunto registrado</CardTitle></CardHeader><CardContent>{loading ? "Carregando..." : loadFailed ? "Não foi possível carregar o saldo." : accounts.length === 0 ? "Cadastre uma conta para começar." : total === null ? "Total indisponível" : <strong>{money(total)}</strong>}</CardContent></Card>
     <Card><CardHeader><CardTitle>Cadastrar conta</CardTitle></CardHeader><CardContent>
       <form onSubmit={create} className="grid gap-3 md:grid-cols-2">
         <div><Label htmlFor="account-name">Nome da conta</Label><Input id="account-name" value={name} onChange={e => setName(e.target.value)} maxLength={100} required /></div>
@@ -78,7 +78,7 @@ export function FinancialAccountsPage() {
       </form>
     </CardContent></Card>
     {accounts.map(account => <Card key={account.account_id}><CardHeader><CardTitle>{account.name} · {account.holder_name}</CardTitle></CardHeader><CardContent className="space-y-3">
-      <p>Saldo informado: <strong>{money(Number(account.balance))}</strong></p>
+      <p>Saldo registrado: <strong>{money(Number(account.balance))}</strong></p>
       <p className="text-sm">Data do saldo inicial: {readableDate(account.opening_date)} · Último registro: {new Date(account.confirmed_at).toLocaleString("pt-BR")}</p>
       <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" onClick={() => { setSelected(account.account_id); setAmount(account.balance); setNote(""); }}>Atualizar saldo</Button><Button type="button" variant="outline" onClick={() => void showHistory(account.account_id)}>{historyId === account.account_id ? "Ocultar histórico" : "Ver histórico"}</Button></div>
       {selected === account.account_id && <form onSubmit={adjust} className="space-y-2"><Label htmlFor={`adjust-${account.account_id}`}>Saldo confirmado no banco (R$)</Label><Input id={`adjust-${account.account_id}`} inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} required /><Label htmlFor={`note-${account.account_id}`}>Observação (opcional)</Label><Input id={`note-${account.account_id}`} value={note} maxLength={500} onChange={e => setNote(e.target.value)} /><div className="flex gap-2"><Button disabled={busy} type="submit">Salvar ajuste</Button><Button variant="outline" type="button" onClick={() => setSelected(null)}>Cancelar</Button></div></form>}

@@ -1,5 +1,6 @@
 // src/components/IncomePage.tsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../ui-components/button";
 import { Input } from "../ui-components/input";
 import { Label } from "../ui-components/label";
@@ -28,6 +29,7 @@ import { incomeDescriptionLabel } from "../utils/labels/incomeDescriptionLabel";
 import { frequencyLabels } from "../utils/labels/frequencyLabels";
 
 export default function IncomePage() {
+  const navigate = useNavigate();
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
@@ -135,7 +137,7 @@ export default function IncomePage() {
       setShowDelete(false);
     } catch (error) {
       console.error("Erro ao deletar income:", error);
-      alert("Erro ao deletar renda.");
+      setToast({ message: typeof error === "object" && error !== null && "code" in error && error.code === "23503" ? "Esta receita possui recebimentos ou ajustes de previsão e não pode ser excluída." : "Não foi possível excluir a receita.", type: "error" });
     }
   };
 
@@ -370,6 +372,8 @@ export default function IncomePage() {
                       <strong style={{ color: "var(--financial-income)" }}>
                         ${inc.value}
                       </strong>
+
+                      <Button type="button" variant="outline" onClick={() => navigate(`/movements?kind=income&source=${inc.id}`)}>Registrar recebimento</Button>
 
                       <button
                         type="button"

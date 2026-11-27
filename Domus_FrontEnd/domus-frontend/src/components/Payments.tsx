@@ -3,6 +3,7 @@
 // =====================================================================
 
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -65,9 +66,11 @@ function addMonths(ym: string, delta: number): string {
 function PaymentRow({
   item,
   onToggle,
+  onRegister,
 }: {
   item: PaymentMonthItem;
   onToggle: (outgoingId: number, paid: boolean) => void;
+  onRegister: (item: PaymentMonthItem) => void;
 }) {
   const config = PAYMENT_CONFIG[item.paymentType] ?? PAYMENT_CONFIG["Cartão de Crédito"];
 
@@ -114,17 +117,19 @@ function PaymentRow({
           }`}
           style={{ color: item.paid ? "var(--financial-success)" : config.accentVar }}
         >
-          {item.paid ? "Pago" : "Pendente"}
+          {item.hasCashMovements ? (item.paid ? "Pago pela conta" : item.cashPaid > 0 ? `Parcial: R$ ${item.cashPaid.toFixed(2)}` : "Estornado") : item.paid ? "Marcado (sem conta)" : "Pendente"}
         </span>
 
-        <button
+        {(item.paymentType === "Cartão de Crédito" || !item.paid) && <button type="button" onClick={() => onRegister(item)} className="text-xs font-semibold underline" style={{ color: "var(--financial-trust)" }}>{item.paymentType === "Cartão de Crédito" ? "Ver fatura" : "Registrar pagamento"}</button>}
+
+        {!item.hasCashMovements && <button
           type="button"
-          title={item.paid ? "Marcar como pendente" : "Marcar como pago"}
+          title={item.paid ? "Desfazer marcação (não altera saldo)" : "Marcar sem movimentar saldo"}
           onClick={() => onToggle(item.outgoingId, !item.paid)}
           className="cursor-pointer transition-opacity hover:opacity-70"
         >
           {item.paid ? "↩️" : "✅"}
-        </button>
+        </button>}
       </div>
     </li>
   );
@@ -133,6 +138,7 @@ function PaymentRow({
 // ── Componente principal ─────────────────────────────────────
 
 export function Payments() {
+  const navigate = useNavigate();
   const [yearMonth, setYearMonth] = useState<string>(getCurrentYearMonth());
   const [payments, setPayments] = useState<PaymentMonthItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,29 +171,30 @@ export function Payments() {
     try {
       const updated = await paymentStatusService.toggle(outgoingId, yearMonth, paid);
       setPayments((prev) =>
-        prev.map((p) => (p.outgoingId === outgoingId ? { ...p, paid: updated.paid } : p))
+        prev.map((p) => (p.outgoingId === outgoingId ? { ...p, paid: updated.paid, legacyMarked: updated.paid } : p))
       );
       setToast({
-        message: paid ? "Marcado como pago!" : "Marcado como pendente.",
+        message: paid ? "Marcação salva. O saldo não foi alterado." : "Marcação removida. O saldo não foi alterado.",
         type: "success",
       });
     } catch {
-      setToast({ message: "Erro ao atualizar pagamento.", type: "error" });
+      setToast({ message: "Não foi possível alterar. Para pagamentos pela conta, use Movimentações.", type: "error" });
     }
   };
 
   // ── Pagar todos do mês ──
   const handlePayAll = async () => {
-    const pending = payments.filter((p) => !p.paid);
+    const pending = payments.filter((p) => !p.paid && !p.hasCashMovements);
     if (pending.length === 0) return;
     try {
-      await Promise.all(
-        pending.map((p) => paymentStatusService.toggle(p.outgoingId, yearMonth, true))
-      );
-      setPayments((prev) => prev.map((p) => ({ ...p, paid: true })));
-      setToast({ message: "Todos os pagamentos do mês marcados como pagos!", type: "success" });
+      const results = await Promise.allSettled(pending.map((p) => paymentStatusService.toggle(p.outgoingId, yearMonth, true)));
+      setPayments(await paymentStatusService.getByMonth(yearMonth));
+      setToast(results.some((result) => result.status === "rejected")
+        ? { message: "Algumas marcações falharam. Confira a lista.", type: "error" }
+        : { message: "Marcações salvas. O saldo não foi alterado!", type: "success" });
     } catch {
-      setToast({ message: "Erro ao atualizar pagamentos.", type: "error" });
+      try { setPayments(await paymentStatusService.getByMonth(yearMonth)); } catch { /* mantém a lista anterior */ }
+      setToast({ message: "Algumas marcações podem ter falhado. Confira a lista.", type: "error" });
     }
   };
 
@@ -200,10 +207,10 @@ export function Payments() {
 
   // ── Totais ──
   const grandTotal = payments.reduce((acc, p) => acc + Number(p.value), 0);
-  const pendingTotal = payments.filter((p) => !p.paid).reduce((acc, p) => acc + Number(p.value), 0);
+  const pendingTotal = payments.filter((p) => !p.paid).reduce((acc, p) => acc + Math.max(0, Number(p.value) - p.cashPaid), 0);
   const paidTotal = grandTotal - pendingTotal;
   const paidCount = payments.filter((p) => p.paid).length;
-  const allPaid = payments.length > 0 && paidCount === payments.length;
+  const allPaid = !payments.some((p) => !p.paid && !p.hasCashMovements);
 
   const filterOptions: {
     key: "ALL" | "PENDING" | "PAID";
@@ -213,7 +220,7 @@ export function Payments() {
   }[] = [
     { key: "ALL",     label: "Todos",     activeColor: "var(--financial-trust)",   activeBg: "rgba(59,130,246,0.18)"  },
     { key: "PENDING", label: "Pendentes", activeColor: "var(--financial-danger)",  activeBg: "rgba(239,68,68,0.18)"   },
-    { key: "PAID",    label: "Pagos",     activeColor: "var(--financial-success)", activeBg: "rgba(16,185,129,0.18)"  },
+    { key: "PAID",    label: "Pagos / marcados",     activeColor: "var(--financial-success)", activeBg: "rgba(16,185,129,0.18)"  },
   ];
 
   if (loading) {
@@ -351,7 +358,7 @@ export function Payments() {
         {[
           { label: "Total Geral", value: grandTotal,   colorVar: "var(--card-foreground)",  emoji: "📊", borderColor: "var(--border)"          },
           { label: "Pendente",    value: pendingTotal, colorVar: "var(--financial-danger)",  emoji: "⏳", borderColor: "rgba(239,68,68,0.3)"     },
-          { label: "Pago",        value: paidTotal,    colorVar: "var(--financial-success)", emoji: "✅", borderColor: "rgba(16,185,129,0.3)"    },
+          { label: "Pago ou marcado",        value: paidTotal,    colorVar: "var(--financial-success)", emoji: "✅", borderColor: "rgba(16,185,129,0.3)"    },
         ].map((item) => (
           <div
             key={item.label}
@@ -369,6 +376,10 @@ export function Payments() {
         ))}
       </div>
 
+      <div className="rounded-lg border p-3 text-sm" style={{ borderColor: "var(--border)", color: "var(--card-foreground)" }}>
+        As marcações antigas não movimentam o saldo. Para registrar um pagamento pela conta ou pagar uma fatura, use <button type="button" className="font-semibold underline" onClick={() => navigate("/movements")}>Movimentações</button>.
+      </div>
+
       {/* ── Lista de pagamentos do mês ── */}
       <Card style={{ borderColor: "var(--border)", background: "var(--card)" }}>
         <CardHeader className="pb-2">
@@ -376,7 +387,7 @@ export function Payments() {
             <CardTitle className="text-base" style={{ color: "var(--card-foreground)" }}>
               {formatYearMonth(yearMonth)}
               <span className="ml-2 text-xs font-normal" style={{ color: "var(--muted-foreground)" }}>
-                {paidCount}/{payments.length} pago{paidCount !== 1 ? "s" : ""}
+                {paidCount}/{payments.length} pago(s) ou marcado(s)
               </span>
             </CardTitle>
 
@@ -392,7 +403,7 @@ export function Payments() {
                   background: "rgba(16,185,129,0.1)",
                 }}
               >
-                ✅ Pagar todos do mês
+                ✅ Marcar todos (sem alterar saldo)
               </button>
             )}
           </div>
@@ -431,6 +442,7 @@ export function Payments() {
                   key={item.outgoingId}
                   item={item}
                   onToggle={handleToggle}
+                  onRegister={(payment) => navigate(payment.paymentType === "Cartão de Crédito" ? "/statements" : `/movements?kind=expense&source=${payment.outgoingId}&month=${yearMonth}`)}
                 />
               ))}
             </ul>

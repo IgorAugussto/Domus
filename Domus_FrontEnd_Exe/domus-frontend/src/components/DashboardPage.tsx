@@ -332,9 +332,9 @@ export function DashboardPage() {
         </h1>
       </div>
 
-      <Card><CardHeader><CardTitle>Saldo conjunto informado</CardTitle></CardHeader><CardContent>
+      <Card><CardHeader><CardTitle>Saldo conjunto registrado</CardTitle></CardHeader><CardContent>
         <p>{accountError ? "Não foi possível carregar o saldo." : accountBalances === null ? "Carregando..." : accountBalances.length === 0 ? "Nenhuma conta cadastrada." : accountTotal === null ? "Total indisponível" : accountTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-        <p className="mt-1 text-sm">Saldo informado manualmente; pagamentos e recebimentos ainda não o atualizam automaticamente.</p>
+        <p className="mt-1 text-sm">Inclui os pagamentos e recebimentos registrados em Movimentações.</p>
       </CardContent></Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { BarChart3, BellRing, CreditCard, DollarSign, Home, IdCard, LogOut, Menu, Moon, ReceiptText, Sun, TrendingUp, Wallet, X } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
-type Page = "dashboard" | "accounts" | "income" | "expenses" | "investments" | "payments" | "cards" | "statements" | "review";
+type Page = "dashboard" | "accounts" | "income" | "expenses" | "investments" | "payments" | "cards" | "statements" | "review" | "movements";
 interface NavigationProps {
   onPageChange: (page: Page) => void;
   onLogout: () => void;
@@ -13,6 +13,7 @@ const sections: { title: string; pages: { id: Page; label: string; icon: typeof 
   { title: "Visão geral", pages: [
     { id: "dashboard", label: "Dashboard", icon: BarChart3 },
     { id: "accounts", label: "Contas e saldos", icon: Wallet },
+    { id: "movements", label: "Movimentações", icon: ReceiptText },
   ] },
   { title: "Finanças", pages: [
     { id: "income", label: "Receitas", icon: TrendingUp },
