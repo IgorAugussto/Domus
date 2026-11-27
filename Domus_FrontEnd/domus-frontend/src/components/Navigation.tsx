@@ -1,134 +1,74 @@
-// src/components/Navigation.tsx
-import { Button } from '../ui-components/button';
-import { DollarSign, TrendingUp, LogOut, Wallet, BarChart3, Sun, Moon, CreditCard, IdCard, BellRing } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { BarChart3, BellRing, CreditCard, DollarSign, Home, IdCard, LogOut, Menu, Moon, ReceiptText, Sun, TrendingUp, Wallet, X } from "lucide-react";
+import { useTheme } from "../hooks/useTheme";
 
-type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards' | 'statements' | 'review' | 'accounts';
-
+type Page = "dashboard" | "accounts" | "income" | "expenses" | "investments" | "payments" | "cards" | "statements" | "review";
 interface NavigationProps {
   onPageChange: (page: Page) => void;
   onLogout: () => void;
 }
 
+const sections: { title: string; pages: { id: Page; label: string; icon: typeof Home }[] }[] = [
+  { title: "Visão geral", pages: [
+    { id: "dashboard", label: "Dashboard", icon: BarChart3 },
+    { id: "accounts", label: "Contas e saldos", icon: Wallet },
+  ] },
+  { title: "Finanças", pages: [
+    { id: "income", label: "Receitas", icon: TrendingUp },
+    { id: "expenses", label: "Despesas", icon: DollarSign },
+    { id: "investments", label: "Investimentos", icon: BarChart3 },
+    { id: "payments", label: "Pagamentos", icon: CreditCard },
+  ] },
+  { title: "Cartões", pages: [
+    { id: "cards", label: "Cartões", icon: IdCard },
+    { id: "statements", label: "Faturas", icon: ReceiptText },
+    { id: "review", label: "Revisar capturas", icon: BellRing },
+  ] },
+];
+
 export default function Navigation({ onPageChange, onLogout }: NavigationProps) {
   const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
+  const currentPage = pathname.replace(/^\//, "") as Page;
+  const [open, setOpen] = useState(false);
 
-  const currentPage = pathname.replace("/", "") as Page;
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
-  return (
-    <nav
-      className="border-b-2 p-4 shadow-lg"
-      style={{
-        background: theme === 'light'
-          ? 'linear-gradient(to right, #1e40af, #16a34a)'
-          : 'linear-gradient(to right, #1e3a8a, #15803d)',
-        borderColor: theme === 'light' ? '#1e293b' : '#334155',
-      }}
-    >
-      <div className="max-w-7xl mx-auto flex flex-wrap gap-3 items-center justify-between">
-        <div className="flex flex-wrap items-center gap-4">
-          <h2
-            className="font-bold text-xl"
-            style={{ color: 'white' }}
-          >
-            Financial Control
-          </h2>
-
-          {/* Botões de navegação */}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={currentPage === 'dashboard' ? 'navActiveDashboard' : 'navButton'}
-              onClick={() => onPageChange('dashboard')}
-              className="flex items-center gap-2 transition-all"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Dashboard
-            </Button>
-
-            <Button variant={currentPage === 'accounts' ? 'navActivePayments' : 'navButton'} onClick={() => onPageChange('accounts')} className="flex items-center gap-2 transition-all">
-              <Wallet className="h-4 w-4" /> Contas
-            </Button>
-
-            <Button
-              variant={currentPage === 'income' ? 'navActiveIncome' : 'navButton'}
-              onClick={() => onPageChange('income')}
-              className="flex items-center gap-2 transition-all"
-            >
-              <Wallet className="h-4 w-4" />
-              Receita
-            </Button>
-
-            <Button
-              variant={currentPage === 'expenses' ? 'navActiveExpenses' : 'navButton'}
-              onClick={() => onPageChange('expenses')}
-              className="flex items-center gap-2 transition-all"
-            >
-              <DollarSign className="h-4 w-4" />
-              Despesa
-            </Button>
-
-            <Button
-              variant={currentPage === 'investments' ? 'navActiveInvestments' : 'navButton'}
-              onClick={() => onPageChange('investments')}
-              className="flex items-center gap-2 transition-all"
-            >
-              <TrendingUp className="h-4 w-4" />
-              Investimento
-            </Button>
-
-            {/* ✅ Botão Pagamentos */}
-            <Button
-              variant={currentPage === 'payments' ? 'navActivePayments' : 'navButton'}
-              onClick={() => onPageChange('payments')}
-              className="flex items-center gap-2 transition-all"
-            >
-              <CreditCard className="h-4 w-4" />
-              Pagamentos
-            </Button>
-            <Button variant={currentPage === 'cards' ? 'navActivePayments' : 'navButton'} onClick={() => onPageChange('cards')} className="flex items-center gap-2 transition-all">
-              <IdCard className="h-4 w-4" /> Cartões
-            </Button>
-            <Button variant={currentPage === 'statements' ? 'navActivePayments' : 'navButton'} onClick={() => onPageChange('statements')} className="flex items-center gap-2 transition-all">
-              <CreditCard className="h-4 w-4" /> Faturas
-            </Button>
-            <Button
-              variant={currentPage === 'review' ? 'navActivePayments' : 'navButton'}
-              onClick={() => onPageChange('review')}
-              className="flex items-center gap-2 transition-all"
-            >
-              <BellRing className="h-4 w-4" />
-              Revisar
-            </Button>
-          </div>
-        </div>
-
-        {/* Tema + Logout */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            className="text-white hover:bg-white/20 rounded-lg"
-          >
-            {theme === 'light' ? (
-              <Moon className="h-5 w-5" />
-            ) : (
-              <Sun className="h-5 w-5" />
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            onClick={onLogout}
-            className="flex items-center gap-2 text-white hover:bg-white/20 rounded-lg"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
-        </div>
+  return <>
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b px-4 shadow-sm sm:px-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+      <button type="button" onClick={() => setOpen(!open)} aria-label={open ? "Fechar menu" : "Abrir menu"} aria-expanded={open} aria-controls="domus-navigation" className="inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-[var(--financial-trust-light)] focus-visible:outline-2 focus-visible:outline-offset-2 lg:hidden" style={{ color: "var(--card-foreground)" }}>
+        {open ? <X size={21} /> : <Menu size={21} />}
+      </button>
+      <div className="hidden w-10 lg:block" />
+      <div className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2" aria-label="Domus">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: "linear-gradient(135deg, #2563eb, #059669)" }}><Home size={19} /></span>
+        <span className="text-xl font-bold tracking-tight" style={{ color: "var(--card-foreground)" }}>Domus</span>
       </div>
-    </nav>
-  );
+      <button type="button" onClick={toggleTheme} aria-label={theme === "light" ? "Ativar tema escuro" : "Ativar tema claro"} className="inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors hover:bg-[var(--financial-trust-light)] focus-visible:outline-2 focus-visible:outline-offset-2" style={{ color: "var(--card-foreground)" }}>
+        {theme === "light" ? <Moon size={19} /> : <Sun size={19} />}
+      </button>
+    </header>
+
+    {open && <button type="button" aria-label="Fechar menu" onClick={() => setOpen(false)} className="fixed inset-x-0 bottom-0 top-16 z-30 bg-black/50 lg:hidden" />}
+    <aside id="domus-navigation" aria-label="Menu principal" className={`fixed bottom-0 left-0 top-16 z-40 flex w-64 flex-col border-r shadow-lg transition-transform duration-200 lg:translate-x-0 lg:shadow-none ${open ? "visible translate-x-0" : "invisible -translate-x-full lg:visible"}`} style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5" aria-label="Navegação principal">
+        {sections.map(section => <div key={section.title}>
+          <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-[0.14em]" style={{ color: "var(--card-foreground)", opacity: 0.6 }}>{section.title}</p>
+          <div className="space-y-1">{section.pages.map(({ id, label, icon: Icon }) => {
+            const active = currentPage === id;
+            return <button key={id} type="button" aria-current={active ? "page" : undefined} onClick={() => { onPageChange(id); setOpen(false); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition-colors hover:bg-[var(--financial-trust-light)] focus-visible:outline-2 focus-visible:outline-offset-2" style={{ color: active ? "var(--financial-trust)" : "var(--card-foreground)", backgroundColor: active ? "var(--financial-trust-light)" : undefined }}>
+              <Icon size={19} aria-hidden="true" /><span className="flex-1">{label}</span>{active && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--financial-trust)" }} />}
+            </button>;
+          })}</div>
+        </div>)}
+      </nav>
+      <div className="border-t p-3" style={{ borderColor: "var(--border)" }}><button type="button" onClick={() => { setOpen(false); onLogout(); }} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium transition-colors hover:bg-[var(--financial-danger-light)] focus-visible:outline-2 focus-visible:outline-offset-2" style={{ color: "var(--card-foreground)" }}><LogOut size={19} /> Sair</button></div>
+    </aside>
+  </>;
 }

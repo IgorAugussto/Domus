@@ -17,9 +17,9 @@ export default function PrivateLayout() {
   return (
     <>
       <Navigation onPageChange={handlePageChange} onLogout={handleLogout} />
-      <div className="p-6">
+      <main className="min-w-0 p-4 sm:p-6 lg:ml-64">
         <Outlet />
-      </div>
+      </main>
     </>
   );
 }
