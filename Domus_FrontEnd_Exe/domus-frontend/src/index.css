@@ -21,6 +21,20 @@
 
   /* FUNDO E CARD */
   --background: #f8fafc;             /* Cinza azulado claro */
+  --foreground: #1e293b;
+  --popover: #ffffff;
+  --popover-foreground: #1e293b;
+  --destructive: #b91c1c;
+  --destructive-foreground: #ffffff;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #e2e8f0;
+  --secondary-foreground: #1e293b;
+  --accent: #e2e8f0;
+  --accent-foreground: #1e293b;
+  --muted-foreground: #475569;
+  --ring: #2563eb;
+  --input: #cbd5e1;
   --card: #ffffff;
   --card-foreground: #1e293b;
   --border: #e2e8f0;
@@ -49,6 +63,14 @@
 
   /* FUNDO E CARD - ESCURO */
   --background: #0f172a;             /* Azul ardósia ESCURO (não preto!) */
+  --foreground: #e2e8f0;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+  --secondary: #334155;
+  --secondary-foreground: #f1f5f9;
+  --accent: #334155;
+  --accent-foreground: #f1f5f9;
+  --input: #475569;
   --card: #1e293b;                   /* Card cinza azulado */
   --card-foreground: #e2e8f0;        /* Texto claro */
   --border: #334155;                 /* Borda sutil */
