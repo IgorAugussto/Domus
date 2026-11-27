@@ -4,7 +4,7 @@ import { DollarSign, TrendingUp, LogOut, Wallet, BarChart3, Sun, Moon, CreditCar
 import { useTheme } from '../hooks/useTheme';
 import { useLocation } from "react-router-dom";
 
-type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards' | 'statements' | 'review';
+type Page = 'dashboard' | 'income' | 'expenses' | 'investments' | 'payments' | 'cards' | 'statements' | 'review' | 'accounts';
 
 interface NavigationProps {
   onPageChange: (page: Page) => void;
@@ -27,8 +27,8 @@ export default function Navigation({ onPageChange, onLogout }: NavigationProps) 
         borderColor: theme === 'light' ? '#1e293b' : '#334155',
       }}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="max-w-7xl mx-auto flex flex-wrap gap-3 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-4">
           <h2
             className="font-bold text-xl"
             style={{ color: 'white' }}
@@ -37,7 +37,7 @@ export default function Navigation({ onPageChange, onLogout }: NavigationProps) 
           </h2>
 
           {/* Botões de navegação */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant={currentPage === 'dashboard' ? 'navActiveDashboard' : 'navButton'}
               onClick={() => onPageChange('dashboard')}
@@ -45,6 +45,10 @@ export default function Navigation({ onPageChange, onLogout }: NavigationProps) 
             >
               <BarChart3 className="h-4 w-4" />
               Dashboard
+            </Button>
+
+            <Button variant={currentPage === 'accounts' ? 'navActivePayments' : 'navButton'} onClick={() => onPageChange('accounts')} className="flex items-center gap-2 transition-all">
+              <Wallet className="h-4 w-4" /> Contas
             </Button>
 
             <Button

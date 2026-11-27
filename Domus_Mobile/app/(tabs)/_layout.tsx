@@ -65,6 +65,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="menu" size={22} color={color} />,
         }}
       />
+      <Tabs.Screen name="accounts" options={{ href: null }} />
       <Tabs.Screen
         name="investments"
         options={{ href: null }}

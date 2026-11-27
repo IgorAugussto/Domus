@@ -12,6 +12,7 @@ import { Payments } from "./components/Payments";
 import { CreditCardsPage } from "./components/CreditCardsPage";
 import { StatementReconciliationPage } from "./components/StatementReconciliationPage";
 import { NotificationReviewPage } from "./components/NotificationReviewPage";
+import { FinancialAccountsPage } from "./components/FinancialAccountsPage";
 
 
 
@@ -26,6 +27,7 @@ export default function App() {
         {/* ROTAS PROTEGIDAS COM NAVEGAÇÃO */}
         <Route element={<PrivateLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/accounts" element={<FinancialAccountsPage />} />
           <Route path="/income" element={<IncomePage />} />
           <Route path="/expenses" element={<ExpensesPage />} />
           <Route path="/investments" element={<InvestmentsPage />} />

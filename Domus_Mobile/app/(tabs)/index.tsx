@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, useWindowDimensions } from "react-native";
 import dayjs from "dayjs";
+import { useFocusEffect } from "expo-router";
+import { financialAccountService, balanceTotal, type FinancialAccount } from "@/services/financialAccountService";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LineChart, PieChart } from "react-native-gifted-charts";
@@ -48,6 +50,8 @@ export default function DashboardScreen() {
   const { width } = useWindowDimensions();
   const chartWidth = width - 32 - 48; // padding da tela + padding do card
 
+  const [accountBalances, setAccountBalances] = useState<FinancialAccount[] | null>(null);
+  const [accountError, setAccountError] = useState(false);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -68,6 +72,13 @@ export default function DashboardScreen() {
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [spendingGoal, setSpendingGoal] = useState(0);
   const [showGoalLine, setShowGoalLine] = useState(false);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    financialAccountService.list().then((items) => { if (active) { setAccountBalances(items); setAccountError(false); } }).catch(() => { if (active) setAccountError(true); });
+    return () => { active = false; };
+  }, []));
+  const accountTotal = accountBalances === null ? null : balanceTotal(accountBalances);
 
   const totalInvestments = useMemo(
     () => investments.reduce((acc, inv) => acc + Number(inv.value), 0),
@@ -204,6 +215,11 @@ export default function DashboardScreen() {
     <View className="flex-1 bg-white dark:bg-slate-900">
       <ScrollView contentContainerClassName="gap-4 p-4 pb-28" keyboardShouldPersistTaps="handled">
         <ScreenHeader title="Visão geral" subtitle="Acompanhe a saúde das suas finanças" icon="pie-chart" />
+
+        <Card><CardHeader><CardTitle>Saldo conjunto informado</CardTitle></CardHeader><CardContent>
+          <Text className="text-cardForeground dark:text-cardForegroundDark">{accountError ? "Não foi possível carregar o saldo." : accountBalances === null ? "Carregando..." : accountBalances.length === 0 ? "Nenhuma conta cadastrada." : accountTotal === null ? "Total indisponível" : currency(accountTotal)}</Text>
+          <Text className="mt-1 text-sm text-mutedForeground dark:text-mutedForegroundDark">Saldo informado manualmente; pagamentos e recebimentos ainda não o atualizam automaticamente.</Text>
+        </CardContent></Card>
 
         <View className="flex-row flex-wrap gap-3">
           <KpiCard

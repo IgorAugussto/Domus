@@ -33,6 +33,7 @@ import { costService } from "../service/costService";
 import { incomeService } from "../service/incomeService";
 import { investmentService } from "../service/investmentService";
 import { dashboardService } from "../service/dashboardService";
+import { financialAccountService, balanceTotal, type FinancialAccount } from "../service/financialAccountService";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { MonthlyProjection } from "../service/dashboardService";
 import type { YearlyProjection } from "../service/dashboardService";
@@ -42,6 +43,8 @@ import { SpendingGoalModal } from "./SpendingGoalModal";
 import { Button } from "../ui-components/button";
 
 export function DashboardPage() {
+  const [accountBalances, setAccountBalances] = useState<FinancialAccount[] | null>(null);
+  const [accountError, setAccountError] = useState(false);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -72,6 +75,9 @@ export function DashboardPage() {
   const [showGoalLine, setShowGoalLine] = useState<boolean>(() => {
     return localStorage.getItem("spendingGoal") !== null;
   });
+
+  useEffect(() => { financialAccountService.list().then(setAccountBalances).catch(() => setAccountError(true)); }, []);
+  const accountTotal = accountBalances === null ? null : balanceTotal(accountBalances);
 
   const totalInvestments = useMemo(() => {
     return investments.reduce((acc, inv) => acc + Number(inv.value), 0);
@@ -325,6 +331,11 @@ export function DashboardPage() {
           Dashboard Financeiro
         </h1>
       </div>
+
+      <Card><CardHeader><CardTitle>Saldo conjunto informado</CardTitle></CardHeader><CardContent>
+        <p>{accountError ? "Não foi possível carregar o saldo." : accountBalances === null ? "Carregando..." : accountBalances.length === 0 ? "Nenhuma conta cadastrada." : accountTotal === null ? "Total indisponível" : accountTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+        <p className="mt-1 text-sm">Saldo informado manualmente; pagamentos e recebimentos ainda não o atualizam automaticamente.</p>
+      </CardContent></Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card
